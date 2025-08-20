@@ -1,0 +1,120 @@
+{
+  "development_hooks": {
+    "description": "Automated triggers for specialized agents during development stages",
+    "version": "1.0",
+    "api_focused_adaptations": {
+      "visual_testing": "simplified",
+      "integration_testing": "emphasized",
+      "performance_testing": "critical"
+    },
+    "stage_hooks": {
+      "stage_2_problem_statement": {
+        "trigger": "stage_completion",
+        "agents": ["global-pmo-director"],
+        "purpose": "Business alignment and ROI validation",
+        "required_artifacts": ["docs/problem-statement.md"],
+        "gate_criteria": ["problem_clarity", "impact_quantification", "business_urgency"]
+      },
+      "stage_2_5_icp": {
+        "trigger": "stage_completion", 
+        "agents": ["project-requirements-analyst", "global-pmo-director"],
+        "purpose": "Customer validation and market analysis",
+        "required_artifacts": ["docs/market/icp.md", "docs/market/business-value.md"],
+        "gate_criteria": ["customer_validation", "market_sizing", "competitive_positioning"]
+      },
+      "stage_3_research": {
+        "trigger": "stage_completion",
+        "agents": ["enterprise-tech-lead"],
+        "purpose": "Technical feasibility and architecture decisions",
+        "required_artifacts": ["docs/tech-research.md", "docs/risk-assessment.md"],
+        "gate_criteria": ["technical_feasibility", "risk_mitigation", "resource_assessment"]
+      },
+      "stage_5_prd": {
+        "trigger": "stage_completion",
+        "agents": ["project-requirements-analyst", "global-qa-lead"],
+        "purpose": "Requirements validation and testability review",
+        "required_artifacts": ["docs/prd.md", "docs/user-stories.md"],
+        "gate_criteria": ["requirements_completeness", "testability", "api_contract_clarity"]
+      },
+      "stage_7_ui_design": {
+        "trigger": "stage_completion",
+        "agents": ["enterprise-tech-lead"],
+        "purpose": "API design validation (simplified for API-focused)",
+        "required_artifacts": ["docs/api-design.md", "docs/openapi-spec.yaml"],
+        "gate_criteria": ["api_design_consistency", "contract_completeness"],
+        "api_focused_note": "Simplified UI validation, focus on API contracts"
+      },
+      "stage_8_architecture": {
+        "trigger": "stage_completion",
+        "agents": ["enterprise-tech-lead", "devops-infrastructure-engineer"],
+        "purpose": "Architecture review and infrastructure planning",
+        "required_artifacts": ["docs/tech-design.md", "docs/deployment-strategy.md"],
+        "gate_criteria": ["architecture_scalability", "deployment_readiness", "monitoring_strategy"]
+      },
+      "stage_9_implementation_plan": {
+        "trigger": "stage_completion",
+        "agents": ["enterprise-tech-lead", "global-qa-lead"],
+        "purpose": "TDD strategy and implementation planning",
+        "required_artifacts": ["docs/tdd-plan.md", "docs/test-strategy.md"],
+        "gate_criteria": ["tdd_completeness", "test_coverage_plan", "api_testing_strategy"]
+      },
+      "stage_11_implementation": {
+        "trigger": "continuous_review",
+        "agents": ["global-qa-lead"],
+        "purpose": "Continuous quality assurance during TDD cycles",
+        "frequency": "per_sprint",
+        "gate_criteria": ["test_coverage_90_percent", "red_green_refactor_compliance", "api_contract_compliance"]
+      },
+      "stage_12_review": {
+        "trigger": "stage_completion",
+        "agents": ["global-qa-lead", "enterprise-tech-lead", "devops-infrastructure-engineer"],
+        "purpose": "Final quality validation and deployment readiness",
+        "required_artifacts": ["test-reports/", "docs/deployment-checklist.md"],
+        "gate_criteria": ["all_tests_passing", "performance_benchmarks", "security_validation", "api_documentation_complete"]
+      }
+    },
+    "quality_gates": {
+      "pre_merge": {
+        "trigger": "pull_request",
+        "agents": ["global-qa-lead"],
+        "automated_checks": ["test_coverage", "linting", "type_checking", "api_contract_validation"],
+        "manual_checks": ["code_review", "security_review"]
+      },
+      "post_deployment": {
+        "trigger": "deployment_complete",
+        "agents": ["devops-infrastructure-engineer"],
+        "monitoring": ["performance_metrics", "error_rates", "api_response_times"],
+        "alerts": ["sla_violations", "security_incidents"]
+      }
+    },
+    "agent_responsibilities": {
+      "global-pmo-director": {
+        "focus": ["business_alignment", "roi_validation", "resource_optimization", "stakeholder_management"],
+        "artifacts_reviewed": ["problem-statement.md", "business-value.md", "market-sizing.md"]
+      },
+      "project-requirements-analyst": {
+        "focus": ["requirements_clarity", "user_story_completeness", "acceptance_criteria", "api_requirements"],
+        "artifacts_reviewed": ["prd.md", "user-stories.md", "icp.md", "api-requirements.md"]
+      },
+      "enterprise-tech-lead": {
+        "focus": ["technical_architecture", "technology_selection", "scalability", "api_design_patterns"],
+        "artifacts_reviewed": ["tech-design.md", "api-design.md", "tdd-plan.md", "architecture-decisions.md"]
+      },
+      "global-qa-lead": {
+        "focus": ["test_strategy", "quality_standards", "tdd_compliance", "api_testing_frameworks"],
+        "artifacts_reviewed": ["test-strategy.md", "tdd-plan.md", "test-reports/", "coverage-reports/"]
+      },
+      "devops-infrastructure-engineer": {
+        "focus": ["deployment_strategy", "ci_cd_pipeline", "monitoring", "infrastructure_scaling"],
+        "artifacts_reviewed": ["deployment-strategy.md", "ci-cd-config/", "monitoring-setup.md"]
+      }
+    },
+    "hook_execution": {
+      "trigger_command": "Task",
+      "agent_selection_parameter": "subagent_type",
+      "prompt_template": "Review {stage_name} completion for API testing project. Focus on {purpose}. Validate {gate_criteria}. Required artifacts: {required_artifacts}.",
+      "parallel_execution": true,
+      "timeout_minutes": 10
+    }
+  }
+}

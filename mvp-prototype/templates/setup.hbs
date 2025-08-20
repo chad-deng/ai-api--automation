@@ -1,0 +1,37 @@
+// Test setup for {{projectName}}
+
+{{#if hasAuth}}
+export async function setupAuth(): Promise<Record<string, string>> {
+  // Configure authentication based on your API requirements
+  // This is a template - customize based on your auth scheme
+  
+  {{#if apiKey}}
+  return {
+    'Authorization': `Bearer ${process.env.API_KEY || 'test-api-key'}`,
+    'Content-Type': 'application/json'
+  };
+  {{/if}}
+  
+  {{#if basic}}
+  const credentials = Buffer.from(`${process.env.API_USER || 'test'}:${process.env.API_PASS || 'test'}`).toString('base64');
+  return {
+    'Authorization': `Basic ${credentials}`,
+    'Content-Type': 'application/json'
+  };
+  {{/if}}
+  
+  return {
+    'Content-Type': 'application/json'
+  };
+}
+{{/if}}
+
+beforeAll(async () => {
+  // Global test setup
+  console.log('🧪 Setting up test environment');
+});
+
+afterAll(async () => {
+  // Global test cleanup
+  console.log('🧹 Cleaning up test environment');
+});

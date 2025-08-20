@@ -1,0 +1,552 @@
+{
+  "betaTestingProgram": {
+    "name": "AI API Test Automation Beta Program",
+    "version": "1.0.0",
+    "description": "Enterprise beta testing program for validating the AI API Test Automation Framework before production release",
+    "startDate": "2025-08-18",
+    "endDate": "2025-08-25",
+    "duration": "7 days",
+    "maxParticipants": 50,
+    "currentParticipants": 12
+  },
+
+  "betaUsers": [
+    {
+      "id": "beta-001",
+      "name": "Sarah Chen",
+      "email": "sarah.chen@techcorp.com",
+      "role": "Senior API Developer",
+      "company": "TechCorp Industries",
+      "experience": "expert",
+      "domain": ["fintech", "microservices", "openapi"],
+      "assignedTestSuites": ["functional-core", "performance-basic", "security-auth"],
+      "availability": {
+        "startDate": "2025-08-18",
+        "endDate": "2025-08-25",
+        "hoursPerDay": 4,
+        "unavailableDates": [],
+        "preferredTimeSlots": [
+          {
+            "startTime": "09:00",
+            "endTime": "12:00",
+            "timezone": "PST"
+          },
+          {
+            "startTime": "14:00",
+            "endTime": "17:00",
+            "timezone": "PST"
+          }
+        ]
+      },
+      "profile": {
+        "technicalBackground": "Full-stack developer with 8 years experience",
+        "apiTestingExperience": 5,
+        "preferredTools": ["Jest", "Supertest", "Postman", "OpenAPI"],
+        "operatingSystem": "macOS",
+        "browserPreference": ["Chrome", "Firefox"],
+        "timezone": "America/Los_Angeles",
+        "communicationPreference": "slack"
+      },
+      "feedback": [
+        {
+          "id": "fb-001",
+          "timestamp": "2025-08-18T10:30:00Z",
+          "category": "usability",
+          "type": "enhancement",
+          "severity": "medium",
+          "description": "CLI commands could be more intuitive for beginners",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "beta-002",
+      "name": "Marcus Rodriguez",
+      "email": "marcus.r@startuptech.io",
+      "role": "QA Lead",
+      "company": "StartupTech",
+      "experience": "intermediate",
+      "domain": ["e-commerce", "rest-apis", "testing-automation"],
+      "assignedTestSuites": ["functional-advanced", "integration-basic"],
+      "availability": {
+        "startDate": "2025-08-18",
+        "endDate": "2025-08-24",
+        "hoursPerDay": 3,
+        "unavailableDates": ["2025-08-21"],
+        "preferredTimeSlots": [
+          {
+            "startTime": "10:00",
+            "endTime": "13:00",
+            "timezone": "EST"
+          }
+        ]
+      },
+      "profile": {
+        "technicalBackground": "QA automation specialist with 4 years experience",
+        "apiTestingExperience": 3,
+        "preferredTools": ["Cypress", "Newman", "Jest"],
+        "operatingSystem": "Ubuntu",
+        "browserPreference": ["Chrome"],
+        "timezone": "America/New_York",
+        "communicationPreference": "email"
+      },
+      "feedback": [
+        {
+          "id": "fb-002",
+          "timestamp": "2025-08-18T15:45:00Z",
+          "category": "functionality",
+          "type": "bug",
+          "severity": "high",
+          "description": "Test generation fails for complex nested schemas",
+          "stepsToReproduce": [
+            "Load OpenAPI spec with deeply nested objects",
+            "Run api-test-gen generate",
+            "Observe error in schema parsing"
+          ],
+          "status": "acknowledged"
+        }
+      ]
+    },
+    {
+      "id": "beta-003",
+      "name": "Aisha Patel",
+      "email": "aisha.patel@enterprise.com",
+      "role": "DevOps Engineer",
+      "company": "Enterprise Solutions Ltd",
+      "experience": "expert",
+      "domain": ["ci-cd", "containerization", "api-testing"],
+      "assignedTestSuites": ["integration-advanced", "performance-enterprise"],
+      "availability": {
+        "startDate": "2025-08-19",
+        "endDate": "2025-08-25",
+        "hoursPerDay": 2,
+        "unavailableDates": [],
+        "preferredTimeSlots": [
+          {
+            "startTime": "08:00",
+            "endTime": "10:00",
+            "timezone": "GMT"
+          }
+        ]
+      },
+      "profile": {
+        "technicalBackground": "DevOps engineer with 6 years CI/CD pipeline experience",
+        "apiTestingExperience": 4,
+        "preferredTools": ["Docker", "Jenkins", "K6", "Newman"],
+        "operatingSystem": "Windows",
+        "browserPreference": ["Edge", "Chrome"],
+        "timezone": "Europe/London",
+        "communicationPreference": "teams"
+      },
+      "feedback": [
+        {
+          "id": "fb-003",
+          "timestamp": "2025-08-19T09:15:00Z",
+          "category": "performance",
+          "type": "compliment",
+          "severity": "low",
+          "description": "Docker integration works seamlessly with our CI pipeline",
+          "status": "resolved"
+        }
+      ]
+    },
+    {
+      "id": "beta-004",
+      "name": "David Kim",
+      "email": "d.kim@innovations.tech",
+      "role": "Software Architect",
+      "company": "Innovations Tech",
+      "experience": "expert",
+      "domain": ["microservices", "api-design", "system-architecture"],
+      "assignedTestSuites": ["security-comprehensive", "performance-scale"],
+      "availability": {
+        "startDate": "2025-08-18",
+        "endDate": "2025-08-22",
+        "hoursPerDay": 3,
+        "unavailableDates": [],
+        "preferredTimeSlots": [
+          {
+            "startTime": "19:00",
+            "endTime": "22:00",
+            "timezone": "KST"
+          }
+        ]
+      },
+      "profile": {
+        "technicalBackground": "Software architect with 10 years enterprise system design",
+        "apiTestingExperience": 7,
+        "preferredTools": ["OpenAPI", "AsyncAPI", "Swagger", "Insomnia"],
+        "operatingSystem": "macOS",
+        "browserPreference": ["Safari", "Chrome"],
+        "timezone": "Asia/Seoul",
+        "communicationPreference": "email"
+      },
+      "feedback": []
+    },
+    {
+      "id": "beta-005",
+      "name": "Elena Vasquez",
+      "email": "elena.v@webdev.co",
+      "role": "Frontend Developer",
+      "company": "WebDev Co",
+      "experience": "beginner",
+      "domain": ["frontend", "api-integration", "react"],
+      "assignedTestSuites": ["functional-basic", "usability-frontend"],
+      "availability": {
+        "startDate": "2025-08-20",
+        "endDate": "2025-08-25",
+        "hoursPerDay": 2,
+        "unavailableDates": ["2025-08-23"],
+        "preferredTimeSlots": [
+          {
+            "startTime": "18:00",
+            "endTime": "20:00",
+            "timezone": "CET"
+          }
+        ]
+      },
+      "profile": {
+        "technicalBackground": "Frontend developer with 2 years React experience",
+        "apiTestingExperience": 1,
+        "preferredTools": ["React", "Axios", "Fetch API"],
+        "operatingSystem": "Windows",
+        "browserPreference": ["Chrome"],
+        "timezone": "Europe/Madrid",
+        "communicationPreference": "slack"
+      },
+      "feedback": [
+        {
+          "id": "fb-005",
+          "timestamp": "2025-08-20T19:30:00Z",
+          "category": "documentation",
+          "type": "question",
+          "severity": "medium",
+          "description": "Need more examples for beginners in the getting started guide",
+          "status": "open"
+        }
+      ]
+    }
+  ],
+
+  "testSuites": [
+    {
+      "id": "functional-basic",
+      "name": "Basic Functional Testing",
+      "description": "Core functionality validation for API test generation",
+      "priority": "critical",
+      "category": "functional",
+      "estimatedDuration": 120,
+      "prerequisites": [
+        "Node.js 18+ installed",
+        "Sample OpenAPI specification available",
+        "CLI tool installed globally"
+      ],
+      "environment": "beta-staging",
+      "userStories": [
+        {
+          "id": "us-001",
+          "title": "Generate basic API tests",
+          "description": "As a developer, I want to generate Jest tests from an OpenAPI spec",
+          "asA": "developer",
+          "iWant": "to generate Jest tests from an OpenAPI specification",
+          "soThat": "I can quickly create comprehensive API test coverage",
+          "acceptanceCriteria": [
+            "CLI accepts OpenAPI spec file path",
+            "Generated tests compile without errors",
+            "Generated tests cover all endpoints",
+            "Tests include proper assertions"
+          ],
+          "priority": "must-have",
+          "businessValue": 10,
+          "technicalComplexity": "medium",
+          "dependencies": []
+        }
+      ],
+      "testCases": [
+        {
+          "id": "tc-001",
+          "userStoryId": "us-001",
+          "title": "Generate tests from sample OpenAPI spec",
+          "description": "Verify that the CLI can generate working Jest tests from a standard OpenAPI specification",
+          "preconditions": [
+            "CLI tool is installed",
+            "Sample OpenAPI spec is available",
+            "Output directory exists"
+          ],
+          "steps": [
+            {
+              "stepNumber": 1,
+              "action": "Run command: api-test-gen generate sample-api.yaml",
+              "expectedResult": "Command executes successfully with success message"
+            },
+            {
+              "stepNumber": 2,
+              "action": "Check generated test files",
+              "expectedResult": "Test files are created in tests/ directory"
+            },
+            {
+              "stepNumber": 3,
+              "action": "Run generated tests with npm test",
+              "expectedResult": "All tests pass successfully"
+            }
+          ],
+          "expectedResult": "Jest tests are generated and execute successfully",
+          "status": "pending",
+          "priority": "critical",
+          "environment": "beta-staging",
+          "tags": ["smoke-test", "cli", "generation"]
+        }
+      ]
+    },
+    {
+      "id": "performance-basic",
+      "name": "Basic Performance Testing",
+      "description": "Validate performance testing capabilities",
+      "priority": "high",
+      "category": "performance",
+      "estimatedDuration": 90,
+      "prerequisites": [
+        "Framework installed",
+        "Target API available",
+        "Performance test configuration"
+      ],
+      "environment": "beta-staging",
+      "userStories": [
+        {
+          "id": "us-002",
+          "title": "Run performance tests",
+          "description": "As a developer, I want to run performance tests against my API",
+          "asA": "developer",
+          "iWant": "to run performance tests against my API endpoints",
+          "soThat": "I can validate API performance meets requirements",
+          "acceptanceCriteria": [
+            "Performance tests execute successfully",
+            "Results include response times",
+            "Results include throughput metrics",
+            "Reports are generated"
+          ],
+          "priority": "should-have",
+          "businessValue": 8,
+          "technicalComplexity": "medium",
+          "dependencies": ["us-001"]
+        }
+      ],
+      "testCases": [
+        {
+          "id": "tc-002",
+          "userStoryId": "us-002",
+          "title": "Execute basic load test",
+          "description": "Run a basic load test against sample API endpoints",
+          "preconditions": [
+            "API is running",
+            "Performance test config exists",
+            "Sufficient system resources"
+          ],
+          "steps": [
+            {
+              "stepNumber": 1,
+              "action": "Run command: api-test-performance run --config basic-load.json",
+              "expectedResult": "Load test starts successfully"
+            },
+            {
+              "stepNumber": 2,
+              "action": "Monitor test execution",
+              "expectedResult": "Test runs for configured duration"
+            },
+            {
+              "stepNumber": 3,
+              "action": "Check generated reports",
+              "expectedResult": "Performance report is generated with metrics"
+            }
+          ],
+          "expectedResult": "Performance test completes with valid results",
+          "status": "pending",
+          "priority": "high",
+          "environment": "beta-staging",
+          "tags": ["performance", "load-test"]
+        }
+      ]
+    }
+  ],
+
+  "acceptanceCriteria": [
+    {
+      "id": "ac-001",
+      "userStoryId": "us-001",
+      "criterion": "CLI generates syntactically correct TypeScript Jest tests",
+      "measurable": true,
+      "metric": "compilation_success_rate",
+      "target": 100,
+      "status": "pending",
+      "verificationMethod": "automated",
+      "priority": "critical"
+    },
+    {
+      "id": "ac-002",
+      "userStoryId": "us-001",
+      "criterion": "Generated tests achieve >85% endpoint coverage",
+      "measurable": true,
+      "metric": "endpoint_coverage",
+      "target": 85,
+      "status": "pending",
+      "verificationMethod": "automated",
+      "priority": "critical"
+    },
+    {
+      "id": "ac-003",
+      "userStoryId": "us-002",
+      "criterion": "Performance tests complete within reasonable time",
+      "measurable": true,
+      "metric": "test_execution_time",
+      "target": 300,
+      "status": "pending",
+      "verificationMethod": "automated",
+      "priority": "important"
+    }
+  ],
+
+  "environment": {
+    "name": "beta-staging",
+    "url": "https://beta-staging.api-test-automation.com",
+    "version": "1.0.0-beta.1",
+    "configuration": {
+      "logLevel": "debug",
+      "enableMetrics": true,
+      "enableTracing": true,
+      "enableMocking": true
+    },
+    "testData": [
+      {
+        "name": "sample-petstore-api",
+        "description": "Standard OpenAPI petstore specification for testing",
+        "data": {
+          "specUrl": "https://petstore3.swagger.io/api/v3/openapi.json",
+          "baseUrl": "https://petstore3.swagger.io/api/v3"
+        }
+      },
+      {
+        "name": "complex-nested-api",
+        "description": "Complex API with nested schemas for advanced testing",
+        "data": {
+          "specFile": "/test-data/complex-nested-api.yaml",
+          "baseUrl": "https://beta-staging.api-test-automation.com/complex-api"
+        }
+      }
+    ],
+    "accessCredentials": {
+      "type": "shared",
+      "credentials": {
+        "apiKey": "beta-test-key-2025",
+        "environment": "staging"
+      }
+    }
+  },
+
+  "reportingConfig": {
+    "formats": ["html", "json", "pdf"],
+    "outputDir": "./uat-reports",
+    "includeScreenshots": true,
+    "includeMetrics": true,
+    "includeUserFeedback": true,
+    "realTimeReporting": true,
+    "distributionList": [
+      "development-team@yourorg.com",
+      "qa-team@yourorg.com",
+      "product-owner@yourorg.com"
+    ]
+  },
+
+  "timeouts": {
+    "testCaseExecution": 300000,
+    "testSuiteExecution": 1800000,
+    "userResponse": 86400000,
+    "systemResponse": 30000
+  },
+
+  "validation": {
+    "requiredPassRate": 90,
+    "criticalTestPassRate": 95,
+    "userSatisfactionThreshold": 80,
+    "performanceThresholds": {
+      "averageResponseTime": 500,
+      "maxResponseTime": 2000,
+      "throughput": 1000,
+      "errorRate": 1
+    },
+    "securityRequirements": [
+      "no-hardcoded-secrets",
+      "secure-communication",
+      "input-validation",
+      "output-sanitization"
+    ]
+  },
+
+  "communicationPlan": {
+    "kickoffMeeting": {
+      "scheduled": "2025-08-18T09:00:00Z",
+      "attendees": ["all-beta-users", "development-team"],
+      "agenda": [
+        "Program introduction",
+        "Tool demonstration",
+        "Test suite assignments",
+        "Support channels setup"
+      ]
+    },
+    "dailyStandups": {
+      "enabled": true,
+      "time": "09:00 UTC",
+      "duration": 15,
+      "format": "slack-async"
+    },
+    "weeklyReviews": {
+      "enabled": true,
+      "schedule": "Fridays 14:00 UTC",
+      "duration": 60,
+      "format": "video-call"
+    },
+    "supportChannels": [
+      {
+        "type": "slack",
+        "channel": "#beta-testing-support",
+        "purpose": "Real-time questions and issues"
+      },
+      {
+        "type": "email",
+        "address": "beta-support@yourorg.com",
+        "purpose": "Formal issue reporting"
+      },
+      {
+        "type": "github",
+        "repository": "yourorg/ai-api-test-automation",
+        "purpose": "Bug reports and feature requests"
+      }
+    ]
+  },
+
+  "incentives": {
+    "participationRewards": [
+      {
+        "condition": "complete_all_assigned_tests",
+        "reward": "$100 Amazon gift card"
+      },
+      {
+        "condition": "provide_detailed_feedback",
+        "reward": "$50 bonus"
+      },
+      {
+        "condition": "report_critical_bug",
+        "reward": "$200 bonus + recognition"
+      }
+    ],
+    "recognition": {
+      "topContributors": {
+        "criteria": "quality and quantity of feedback",
+        "reward": "Special mention in release notes + $300 bonus"
+      },
+      "earlyAdopters": {
+        "criteria": "first 5 to complete testing",
+        "reward": "Beta tester badge + priority support"
+      }
+    }
+  }
+}

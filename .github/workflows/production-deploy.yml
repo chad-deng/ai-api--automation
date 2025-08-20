@@ -1,0 +1,347 @@
+name: Production Deployment
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      version:
+        description: 'Version to deploy'
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY_URL: 'https://registry.npmjs.org'
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      environment: ${{ steps.environment.outputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --production=false
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test -- --coverage
+
+      - name: Check test coverage threshold
+        run: |
+          COVERAGE=$(npx nyc report --reporter=text-summary | grep "Lines" | awk '{print $2}' | sed 's/%//')
+          if [ "$COVERAGE" -lt "85" ]; then
+            echo "Test coverage $COVERAGE% is below 85% threshold"
+            exit 1
+          fi
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine environment
+        id: environment
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            echo "environment=production" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security scanner
+        run: npm run security:scan
+
+      - name: Upload security results
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-results
+          path: security-reports/
+          retention-days: 30
+
+  performance-validation:
+    name: Performance Validation
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run performance benchmarks
+        run: npm run performance:benchmark
+
+      - name: Validate performance thresholds
+        run: npm run performance:validate
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-benchmarks
+          path: performance-benchmarks/
+          retention-days: 30
+
+  build-and-package:
+    name: Build and Package
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, security-scan, performance-validation]
+    outputs:
+      package-name: ${{ steps.package.outputs.name }}
+      package-version: ${{ steps.package.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          registry-url: ${{ env.REGISTRY_URL }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Package application
+        id: package
+        run: |
+          npm pack
+          PACKAGE_NAME=$(npm pack --dry-run | tail -1)
+          PACKAGE_VERSION=${{ needs.pre-deployment-checks.outputs.version }}
+          echo "name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            *.tgz
+          retention-days: 30
+
+  staging-deployment:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, build-and-package]
+    if: needs.pre-deployment-checks.outputs.environment == 'staging' || needs.pre-deployment-checks.outputs.environment == 'production'
+    environment:
+      name: staging
+      url: https://staging.api-test-automation.com
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying version ${{ needs.pre-deployment-checks.outputs.version }} to staging"
+          # Add staging deployment logic here
+          # This could include:
+          # - Deploying to staging environment
+          # - Running smoke tests
+          # - Validating deployment health
+
+      - name: Run staging smoke tests
+        run: |
+          echo "Running smoke tests on staging"
+          # Add smoke test logic here
+
+      - name: Validate staging deployment
+        run: |
+          echo "Validating staging deployment health"
+          # Add health check logic here
+
+  production-deployment:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, build-and-package, staging-deployment]
+    if: needs.pre-deployment-checks.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://api-test-automation.com
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Create deployment record
+        run: |
+          echo "Creating deployment record for version ${{ needs.pre-deployment-checks.outputs.version }}"
+          # Add deployment tracking logic here
+
+      - name: Deploy to NPM registry
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "Publishing package to NPM"
+          npm publish *.tgz --access public
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.pre-deployment-checks.outputs.version }}
+          release_name: Release ${{ needs.pre-deployment-checks.outputs.version }}
+          body: |
+            ## Release ${{ needs.pre-deployment-checks.outputs.version }}
+            
+            ### What's New
+            - Enterprise-grade API test automation framework
+            - Comprehensive security scanning and monitoring
+            - Advanced performance optimization
+            - Full integration testing suite
+            
+            ### Installation
+            ```bash
+            npm install -g @yourorg/ai-api-test-automation
+            ```
+            
+            ### Quick Start
+            ```bash
+            api-test-gen generate openapi.yaml
+            ```
+            
+            See the [documentation](https://docs.api-test-automation.com) for more details.
+          draft: false
+          prerelease: false
+
+      - name: Deploy documentation
+        run: |
+          echo "Deploying documentation to production"
+          # Add documentation deployment logic here
+
+      - name: Run production smoke tests
+        run: |
+          echo "Running production smoke tests"
+          # Add production smoke test logic here
+
+      - name: Validate production deployment
+        run: |
+          echo "Validating production deployment"
+          # Add production health checks here
+
+      - name: Update deployment status
+        run: |
+          echo "Production deployment completed successfully"
+          # Add success notification logic here
+
+  rollback-plan:
+    name: Prepare Rollback Plan
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks]
+    if: always()
+    steps:
+      - name: Create rollback instructions
+        run: |
+          echo "Preparing rollback plan for version ${{ needs.pre-deployment-checks.outputs.version }}"
+          # Add rollback preparation logic here
+
+      - name: Store rollback artifacts
+        run: |
+          echo "Storing rollback artifacts"
+          # Add rollback artifact storage logic here
+
+  notification:
+    name: Deployment Notifications
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, production-deployment]
+    if: always()
+    steps:
+      - name: Notify deployment status
+        run: |
+          if [[ "${{ needs.production-deployment.result }}" == "success" ]]; then
+            echo "✅ Production deployment successful for version ${{ needs.pre-deployment-checks.outputs.version }}"
+          else
+            echo "❌ Production deployment failed for version ${{ needs.pre-deployment-checks.outputs.version }}"
+          fi
+          # Add notification logic (Slack, email, etc.)
+
+  cleanup:
+    name: Post-deployment Cleanup
+    runs-on: ubuntu-latest
+    needs: [production-deployment]
+    if: always()
+    steps:
+      - name: Cleanup temporary resources
+        run: |
+          echo "Cleaning up temporary deployment resources"
+          # Add cleanup logic here
+
+      - name: Archive deployment logs
+        run: |
+          echo "Archiving deployment logs"
+          # Add log archival logic here

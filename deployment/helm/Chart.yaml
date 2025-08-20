@@ -1,0 +1,27 @@
+apiVersion: v2
+name: ai-api-test-automation
+description: Enterprise-grade API test automation framework Helm chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+home: https://api-test-automation.com
+sources:
+  - https://github.com/yourorg/ai-api-test-automation
+
+maintainers:
+  - name: Development Team
+    email: development-team@yourorg.com
+    url: https://yourorg.com
+
+keywords:
+  - api
+  - testing
+  - automation
+  - openapi
+  - performance
+  - security
+
+annotations:
+  category: Testing
+  licenses: MIT

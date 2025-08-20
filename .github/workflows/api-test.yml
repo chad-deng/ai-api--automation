@@ -1,0 +1,620 @@
+name: API Test Automation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_environment:
+        description: 'Environment to test against'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - 'staging'
+          - 'production'
+          - 'development'
+      performance_test:
+        description: 'Run performance tests'
+        required: false
+        default: false
+        type: boolean
+      security_test:
+        description: 'Run security tests'
+        required: false
+        default: true
+        type: boolean
+      generate_new_tests:
+        description: 'Generate new tests from OpenAPI specs'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  ARTIFACT_RETENTION: 30
+
+jobs:
+  # Job 1: Test Generation
+  generate-tests:
+    name: Generate API Tests
+    runs-on: ubuntu-latest
+    if: ${{ inputs.generate_new_tests == true || github.event_name == 'schedule' }}
+    
+    outputs:
+      tests-generated: ${{ steps.generate.outputs.tests-generated }}
+      spec-hash: ${{ steps.spec-check.outputs.spec-hash }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check OpenAPI spec changes
+        id: spec-check
+        run: |
+          SPEC_HASH=$(find specs/ -name "*.yaml" -o -name "*.yml" -o -name "*.json" | sort | xargs cat | sha256sum | cut -d' ' -f1)
+          echo "spec-hash=${SPEC_HASH}" >> $GITHUB_OUTPUT
+          echo "Current spec hash: ${SPEC_HASH}"
+
+      - name: Cache generated tests
+        uses: actions/cache@v3
+        id: test-cache
+        with:
+          path: |
+            tests/generated/
+            tests/contract/
+          key: generated-tests-${{ steps.spec-check.outputs.spec-hash }}
+
+      - name: Generate API tests
+        id: generate
+        if: steps.test-cache.outputs.cache-hit != 'true'
+        run: |
+          # Generate tests from all OpenAPI specifications
+          mkdir -p tests/generated tests/contract reports
+          
+          TESTS_GENERATED=0
+          for spec in specs/*.{yaml,yml,json}; do
+            if [ -f "$spec" ]; then
+              echo "Generating tests for $spec"
+              
+              # Generate functional tests
+              npm run cli -- test generate "$spec" \
+                --output tests/generated \
+                --framework jest \
+                --include-security \
+                --include-types \
+                --include-contracts \
+                --auth-profile default
+              
+              # Generate contract tests
+              npm run cli -- contract validate "$spec" \
+                --output tests/contract \
+                --framework jest \
+                --validate-requests \
+                --validate-responses \
+                --validate-headers \
+                --auth-profile default
+              
+              TESTS_GENERATED=$((TESTS_GENERATED + 1))
+            fi
+          done
+          
+          echo "tests-generated=${TESTS_GENERATED}" >> $GITHUB_OUTPUT
+          echo "Generated tests for ${TESTS_GENERATED} specifications"
+
+      - name: Upload generated tests
+        uses: actions/upload-artifact@v3
+        with:
+          name: generated-tests-${{ github.run_id }}
+          path: |
+            tests/generated/
+            tests/contract/
+          retention-days: ${{ env.ARTIFACT_RETENTION }}
+
+  # Job 2: Static Analysis and Validation
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run type checker
+        run: npm run typecheck
+
+      - name: Validate OpenAPI specifications
+        run: |
+          for spec in specs/*.{yaml,yml,json}; do
+            if [ -f "$spec" ]; then
+              echo "Validating $spec"
+              npm run cli -- validate "$spec"
+            fi
+          done
+
+      - name: Security scan
+        uses: github/super-linter@v4
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_TYPESCRIPT_ES: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+
+  # Job 3: Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test -- --coverage --ci
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unit-tests
+          name: unit-tests
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: unit-test-results-${{ github.run_id }}
+          path: |
+            coverage/
+            junit.xml
+          retention-days: ${{ env.ARTIFACT_RETENTION }}
+
+  # Job 4: API Functional Tests
+  functional-tests:
+    name: Functional API Tests
+    runs-on: ubuntu-latest
+    needs: [generate-tests]
+    if: always()
+    
+    strategy:
+      matrix:
+        environment: 
+          - ${{ inputs.test_environment || 'staging' }}
+      fail-fast: false
+    
+    environment: ${{ matrix.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download generated tests
+        uses: actions/download-artifact@v3
+        if: needs.generate-tests.result == 'success'
+        with:
+          name: generated-tests-${{ github.run_id }}
+          path: .
+
+      - name: Setup test environment
+        run: |
+          # Set environment-specific variables
+          case "${{ matrix.environment }}" in
+            "staging")
+              echo "API_BASE_URL=${{ secrets.STAGING_API_URL }}" >> $GITHUB_ENV
+              echo "AUTH_PROFILE=staging" >> $GITHUB_ENV
+              ;;
+            "production")
+              echo "API_BASE_URL=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_ENV
+              echo "AUTH_PROFILE=production" >> $GITHUB_ENV
+              ;;
+            "development")
+              echo "API_BASE_URL=${{ secrets.DEVELOPMENT_API_URL }}" >> $GITHUB_ENV
+              echo "AUTH_PROFILE=development" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Configure authentication
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
+          OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+          OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+        run: |
+          # Configure authentication profiles
+          npm run cli -- auth configure \
+            --name "$AUTH_PROFILE" \
+            --type bearer \
+            --token "$BEARER_TOKEN" \
+            --environment "${{ matrix.environment }}"
+
+      - name: Run functional tests
+        run: |
+          # Run generated tests
+          if [ -d "tests/generated" ]; then
+            npm test -- tests/generated/ --testPathPattern="\.test\.(ts|js)$" --ci --passWithNoTests
+          fi
+          
+          # Run existing functional tests
+          npm test -- tests/functional/ --testPathPattern="\.test\.(ts|js)$" --ci --passWithNoTests
+
+      - name: Run contract tests
+        if: always()
+        run: |
+          if [ -d "tests/contract" ]; then
+            npm test -- tests/contract/ --testPathPattern="\.test\.(ts|js)$" --ci --passWithNoTests
+          fi
+
+      - name: Upload functional test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: functional-test-results-${{ matrix.environment }}-${{ github.run_id }}
+          path: |
+            junit.xml
+            test-results/
+          retention-days: ${{ env.ARTIFACT_RETENTION }}
+
+  # Job 5: Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [functional-tests]
+    if: ${{ inputs.performance_test == true || github.event_name == 'schedule' }}
+    
+    strategy:
+      matrix:
+        environment: 
+          - ${{ inputs.test_environment || 'staging' }}
+      fail-fast: false
+    
+    environment: ${{ matrix.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure performance test environment
+        run: |
+          case "${{ matrix.environment }}" in
+            "staging")
+              echo "API_BASE_URL=${{ secrets.STAGING_API_URL }}" >> $GITHUB_ENV
+              echo "CONCURRENCY=10" >> $GITHUB_ENV
+              echo "DURATION=300" >> $GITHUB_ENV
+              ;;
+            "production")
+              echo "API_BASE_URL=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_ENV
+              echo "CONCURRENCY=5" >> $GITHUB_ENV
+              echo "DURATION=180" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "API_BASE_URL=${{ secrets.DEVELOPMENT_API_URL }}" >> $GITHUB_ENV
+              echo "CONCURRENCY=20" >> $GITHUB_ENV
+              echo "DURATION=120" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Run performance tests
+        run: |
+          mkdir -p reports/performance
+          
+          # Run performance tests for each API specification
+          for spec in specs/*.{yaml,yml,json}; do
+            if [ -f "$spec" ]; then
+              SPEC_NAME=$(basename "$spec" | cut -d. -f1)
+              echo "Running performance test for $SPEC_NAME"
+              
+              npm run cli -- performance run \
+                --spec "$spec" \
+                --base-url "$API_BASE_URL" \
+                --concurrency "$CONCURRENCY" \
+                --duration "$DURATION" \
+                --auth-profile "${{ matrix.environment }}" \
+                --output reports/performance \
+                --format html \
+                --thresholds-file performance-thresholds.json
+            fi
+          done
+
+      - name: Check performance thresholds
+        run: |
+          # Parse performance results and check against thresholds
+          if [ -f "reports/performance/results.json" ]; then
+            FAILED_THRESHOLDS=$(jq '.thresholdResults[] | select(.passed == false) | .name' reports/performance/results.json | wc -l)
+            
+            if [ "$FAILED_THRESHOLDS" -gt 0 ]; then
+              echo "::warning::$FAILED_THRESHOLDS performance thresholds failed"
+              echo "PERFORMANCE_ISSUES=true" >> $GITHUB_ENV
+            else
+              echo "All performance thresholds passed"
+              echo "PERFORMANCE_ISSUES=false" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-reports-${{ matrix.environment }}-${{ github.run_id }}
+          path: reports/performance/
+          retention-days: ${{ env.ARTIFACT_RETENTION }}
+
+  # Job 6: Security Tests
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: [functional-tests]
+    if: ${{ inputs.security_test != false }}
+    
+    strategy:
+      matrix:
+        environment: 
+          - ${{ inputs.test_environment || 'staging' }}
+      fail-fast: false
+    
+    environment: ${{ matrix.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure security test environment
+        run: |
+          case "${{ matrix.environment }}" in
+            "staging")
+              echo "API_BASE_URL=${{ secrets.STAGING_API_URL }}" >> $GITHUB_ENV
+              ;;
+            "production")
+              echo "API_BASE_URL=${{ secrets.PRODUCTION_API_URL }}" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "API_BASE_URL=${{ secrets.DEVELOPMENT_API_URL }}" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: Run security tests
+        run: |
+          mkdir -p reports/security
+          
+          # Run security tests
+          npm run cli -- security scan \
+            --base-url "$API_BASE_URL" \
+            --auth-profile "${{ matrix.environment }}" \
+            --output reports/security \
+            --format json \
+            --severity-threshold medium
+
+      - name: Process security results
+        run: |
+          if [ -f "reports/security/results.json" ]; then
+            HIGH_VULNS=$(jq '.vulnerabilities[] | select(.severity == "high")' reports/security/results.json | jq -s length)
+            MEDIUM_VULNS=$(jq '.vulnerabilities[] | select(.severity == "medium")' reports/security/results.json | jq -s length)
+            
+            echo "High severity vulnerabilities: $HIGH_VULNS"
+            echo "Medium severity vulnerabilities: $MEDIUM_VULNS"
+            
+            if [ "$HIGH_VULNS" -gt 0 ]; then
+              echo "::error::Found $HIGH_VULNS high severity vulnerabilities"
+              exit 1
+            elif [ "$MEDIUM_VULNS" -gt 3 ]; then
+              echo "::warning::Found $MEDIUM_VULNS medium severity vulnerabilities"
+            fi
+          fi
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports-${{ matrix.environment }}-${{ github.run_id }}
+          path: reports/security/
+          retention-days: ${{ env.ARTIFACT_RETENTION }}
+
+  # Job 7: Generate Reports
+  generate-reports:
+    name: Generate Test Reports
+    runs-on: ubuntu-latest
+    needs: [unit-tests, functional-tests, performance-tests, security-tests]
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      - name: Generate comprehensive report
+        run: |
+          mkdir -p reports/final
+          
+          # Generate comprehensive HTML report
+          npm run cli -- report generate \
+            --input artifacts/ \
+            --output reports/final \
+            --format html \
+            --include-charts \
+            --title "API Test Results - $(date +'%Y-%m-%d %H:%M')" \
+            --theme light
+
+          # Generate JSON report for APIs
+          npm run cli -- report generate \
+            --input artifacts/ \
+            --output reports/final \
+            --format json \
+            --title "API Test Results"
+
+          # Generate JUnit XML for CI integration
+          npm run cli -- report generate \
+            --input artifacts/ \
+            --output reports/final \
+            --format junit \
+            --title "API Test Results"
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: API Test Results
+          path: reports/final/junit-report.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Deploy reports to GitHub Pages
+        if: github.ref == 'refs/heads/main' && always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: reports/final
+          destination_dir: test-reports/${{ github.run_number }}
+
+      - name: Upload final reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: final-test-reports-${{ github.run_id }}
+          path: reports/final/
+          retention-days: 90
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const reportData = fs.readFileSync('reports/final/test-report.json', 'utf8');
+              const report = JSON.parse(reportData);
+              
+              const summary = report.summary;
+              const body = `## 🧪 API Test Results
+              
+              | Metric | Value |
+              |--------|-------|
+              | Total Tests | ${summary.totalTests} |
+              | Passed | ✅ ${summary.passed} |
+              | Failed | ❌ ${summary.failures} |
+              | Success Rate | ${summary.successRate.toFixed(2)}% |
+              | Duration | ${summary.duration.toFixed(2)}s |
+              
+              [📊 View detailed report](https://\${{ github.repository_owner }}.github.io/\${{ github.repository }}/test-reports/\${{ github.run_number }}/test-report.html)
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            } catch (error) {
+              console.log('Could not post comment:', error.message);
+            }
+
+  # Job 8: Cleanup
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [generate-reports]
+    if: always()
+    
+    steps:
+      - name: Delete old artifacts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            
+            const oldArtifacts = artifacts.data.artifacts.filter(artifact => {
+              const ageInDays = (Date.now() - new Date(artifact.created_at).getTime()) / (1000 * 60 * 60 * 24);
+              return ageInDays > 30;
+            });
+            
+            for (const artifact of oldArtifacts) {
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id
+                });
+                console.log(`Deleted artifact: ${artifact.name}`);
+              } catch (error) {
+                console.log(`Could not delete artifact ${artifact.name}: ${error.message}`);
+              }
+            }

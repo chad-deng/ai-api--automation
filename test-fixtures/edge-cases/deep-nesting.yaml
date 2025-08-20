@@ -1,0 +1,164 @@
+openapi: 3.0.0
+info:
+  title: Deep Nesting Test API
+  version: 1.0.0
+  description: Tests deeply nested schema handling (10+ levels)
+servers:
+  - url: https://api.example.com/v1
+
+paths:
+  /complex-data:
+    post:
+      operationId: submitComplexData
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Level1'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+
+components:
+  schemas:
+    Level1:
+      type: object
+      required: [id, level2]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        level2:
+          $ref: '#/components/schemas/Level2'
+
+    Level2:
+      type: object
+      required: [data, level3]
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        level3:
+          $ref: '#/components/schemas/Level3'
+
+    Level3:
+      type: object
+      required: [configuration, level4]
+      properties:
+        configuration:
+          type: object
+          properties:
+            settings:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  value:
+                    oneOf:
+                      - type: string
+                      - type: number
+                      - type: boolean
+        level4:
+          $ref: '#/components/schemas/Level4'
+
+    Level4:
+      type: object
+      required: [nestedArray, level5]
+      properties:
+        nestedArray:
+          type: array
+          items:
+            type: object
+            properties:
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    subitems:
+                      type: array
+                      items:
+                        type: string
+        level5:
+          $ref: '#/components/schemas/Level5'
+
+    Level5:
+      type: object
+      required: [complexObject, level6]
+      properties:
+        complexObject:
+          type: object
+          properties:
+            permissions:
+              type: object
+              properties:
+                read:
+                  type: object
+                  properties:
+                    users:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          userId:
+                            type: string
+                          roles:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                roleId:
+                                  type: string
+                                permissions:
+                                  type: array
+                                  items:
+                                    type: string
+        level6:
+          $ref: '#/components/schemas/Level6'
+
+    Level6:
+      type: object
+      properties:
+        deepData:
+          type: object
+          properties:
+            level7:
+              type: object
+              properties:
+                level8:
+                  type: object
+                  properties:
+                    level9:
+                      type: object
+                      properties:
+                        level10:
+                          type: object
+                          properties:
+                            finalLevel:
+                              type: object
+                              properties:
+                                value:
+                                  type: string
+                                  example: "Deeply nested value"
+                                success:
+                                  type: boolean
+                                  default: true

@@ -1,0 +1,26 @@
+{
+  "staging": {
+    "avgResponseTime": 500,
+    "maxResponseTime": 2000,
+    "p95ResponseTime": 1000,
+    "p99ResponseTime": 1500,
+    "errorRate": 5,
+    "throughput": 50
+  },
+  "production": {
+    "avgResponseTime": 300,
+    "maxResponseTime": 1000,
+    "p95ResponseTime": 600,
+    "p99ResponseTime": 800,
+    "errorRate": 1,
+    "throughput": 100
+  },
+  "development": {
+    "avgResponseTime": 1000,
+    "maxResponseTime": 5000,
+    "p95ResponseTime": 2000,
+    "p99ResponseTime": 3000,
+    "errorRate": 10,
+    "throughput": 20
+  }
+}
