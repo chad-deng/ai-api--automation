@@ -1,47 +1,47 @@
-# AI API Test Automation Project
+# ApiFox Webhook Test Automation Project
 
 ## 🚀 5-Part Structured Project Definition
 
 ### 1. 背景 (Background)
-An enterprise-grade API test automation system that solves the critical problem of manual API testing workflows consuming 70-80% of development cycles. Manual test creation from OpenAPI specifications leads to delayed releases, inconsistent test coverage, and poor API quality in production systems. This project follows the Hybrid v2.1 development methodology combining enterprise-level rigor with modern visual testing capabilities.
+An ApiFox-integrated webhook automation system that solves the critical problem of manual API test design and implementation. When developers create or update API documents in ApiFox, QA teams currently must manually design and implement API tests one by one, which is time-consuming and creates bottlenecks in the development workflow. This project follows the Hybrid v2.1 development methodology combining enterprise-level rigor with modern visual testing capabilities.
 
-**Problem Impact**: Teams spend $50-100K annually per team on repetitive test creation, with 60% of API-related bugs reaching production due to inadequate testing coverage.
+**Problem Impact**: QA teams spend significant time manually creating API tests for each endpoint in ApiFox, delaying testing cycles and creating maintenance overhead.
 
-### 2. 描述 (Description)
-**Core Mission**: Automate API testing workflow by parsing OpenAPI specs and generating high-quality, maintainable test suites with TDD practices, integrated CI/CD pipelines, and comprehensive reporting.
+### 2. 描述 (Description)  
+**Core Mission**: Automate API test generation and execution through ApiFox webhook integration. When API documents are created/updated in ApiFox, a webhook triggers a local server script that automatically generates comprehensive pytest test suites, including CRUD operations, edge cases, error scenarios, and performance tests, which QA can then review and customize.
 
 **Key Features**:
-- OpenAPI specification parsing and validation
-- Automated test case generation (Jest, Mocha, Vitest)
-- Advanced scenario testing with edge cases
-- Enterprise authentication support
-- CI/CD pipeline integration
-- Performance monitoring and reporting
-- Visual testing integration (Percy/Applitools)
+- ApiFox webhook integration for real-time API document changes
+- Automated pytest test suite generation (CRUD, edge cases, error scenarios, performance)
+- Python-based local server for webhook processing
+- Comprehensive test coverage with QA review workflow
+- ApiFox API specification parsing and validation
+- Test generation for all API operations and data models
+- Performance testing integration with pytest-benchmark
 
 ### 3. 平台 (Platform)
-- **Runtime**: Node.js with TypeScript
-- **Testing Frameworks**: Jest, Mocha, Vitest
-- **API Specs**: OpenAPI 3.x
-- **CI/CD**: GitHub Actions, Jenkins
-- **Visual Testing**: Percy, Applitools
-- **Design Integration**: Figma tokens
-- **Monitoring**: OpenTelemetry, custom metrics
+- **Runtime**: Python 3.9+ 
+- **Testing Framework**: pytest with plugins (pytest-asyncio, pytest-benchmark, pytest-html)
+- **API Integration**: ApiFox webhook API
+- **Web Server**: FastAPI/Flask for webhook endpoint
+- **API Specs**: ApiFox API documentation format
+- **Local Environment**: Local server deployment
+- **Performance Testing**: pytest-benchmark, locust integration
 
 ### 4. 视觉风格 (Visual Style)
-- **CLI Interface**: Clean, minimalist terminal UI
-- **Reports**: Professional HTML/PDF reports with charts
-- **Dashboard**: Modern web-based monitoring interface
-- **Documentation**: Technical documentation with code examples
+- **CLI Interface**: Python-based command line tools with rich console output
+- **Test Reports**: pytest-html generated reports with detailed test results
+- **Webhook Logs**: Structured logging with timestamp and status tracking
+- **QA Review Interface**: Clear test file organization for easy review and customization
 
 ### 5. 组件 (Components)
-- **Core Parser**: OpenAPI specification analysis
-- **Test Generator**: Multi-framework test suite generation
-- **Auth Manager**: Enterprise authentication handling
-- **CI/CD Integrator**: Pipeline automation
-- **Report Generator**: Comprehensive test reporting
-- **Performance Monitor**: API performance tracking
-- **Visual Test Engine**: UI regression testing
+- **Webhook Server**: FastAPI/Flask server to receive ApiFox webhooks
+- **ApiFox Parser**: Parse API documentation from ApiFox webhook payload
+- **Pytest Generator**: Generate comprehensive test suites with CRUD, edge cases, performance tests
+- **Test Template Engine**: Customizable pytest templates for different API patterns
+- **QA Review System**: Organized file structure for QA test review and customization
+- **Test Execution Engine**: Automated pytest runner with reporting
+- **Configuration Manager**: Manage ApiFox integration settings and test parameters
 
 ---
 
@@ -49,29 +49,34 @@ An enterprise-grade API test automation system that solves the critical problem 
 
 ### Core Development
 ```bash
-npm install                    # Install dependencies
-npm run build                  # Build TypeScript project
-npm run dev                    # Development mode with watch
-npm test                       # Run all tests
-npm run test:watch             # Run tests in watch mode
-npm run lint                   # ESLint code analysis
-npm run typecheck             # TypeScript type checking
+pip install -r requirements.txt   # Install Python dependencies
+python -m pytest                  # Run all tests
+python -m pytest --watch          # Run tests in watch mode
+python -m black .                  # Code formatting
+python -m flake8 .                # Code linting
+python -m mypy .                   # Type checking
+```
+
+### Webhook Server
+```bash
+python webhook_server.py          # Start webhook server locally
+python webhook_server.py --port 8080  # Start on specific port
+python -m uvicorn webhook_server:app --reload  # FastAPI development mode
 ```
 
 ### Test Generation
 ```bash
-npm run generate              # Generate tests from OpenAPI spec
-npm run generate:jest         # Generate Jest-specific tests
-npm run generate:mocha        # Generate Mocha-specific tests
-npm run generate:vitest       # Generate Vitest-specific tests
+python generate_tests.py          # Generate pytest tests from ApiFox
+python generate_tests.py --api-spec path/to/spec.json  # Generate from specific spec
+python generate_tests.py --output tests/generated/     # Specify output directory
 ```
 
 ### Quality Assurance
 ```bash
-npm run test:coverage         # Test coverage report
-npm run test:integration      # Integration tests
-npm run test:e2e             # End-to-end tests
-npm run security:scan        # Security vulnerability scan
+python -m pytest --cov=src        # Test coverage report
+python -m pytest tests/integration/  # Integration tests
+python -m pytest --benchmark-only    # Performance tests only
+python -m pytest --html=report.html  # Generate HTML test report
 ```
 
 ---
@@ -79,27 +84,26 @@ npm run security:scan        # Security vulnerability scan
 ## 📁 Project Structure
 
 ```
-ai-api-test-automation/
+apifox-webhook-test-automation/
 ├── src/                      # Source code
-│   ├── auth/                 # Authentication modules
-│   ├── cicd/                 # CI/CD integrations
+│   ├── webhook/              # Webhook server and handlers
+│   ├── parsers/              # ApiFox API specification parsers
+│   ├── generators/           # Pytest test generators
+│   ├── templates/            # Test template engines
 │   ├── config/               # Configuration management
-│   ├── error/                # Error handling
-│   ├── generator/            # Test generation engine
-│   ├── parser/               # OpenAPI parser
-│   ├── reporting/            # Report generation
-│   ├── security/             # Security scanning
-│   ├── validation/           # Code quality validation
-│   └── types.ts              # Type definitions
+│   ├── utils/                # Utility functions
+│   └── __init__.py           # Package initialization
 ├── tests/                    # Test suites
-│   ├── unit/                 # Unit tests
+│   ├── unit/                 # Unit tests for the automation system
 │   ├── integration/          # Integration tests
-│   └── generated/            # Generated test files
+│   └── generated/            # Auto-generated pytest files from ApiFox
 ├── docs/                     # Documentation
 │   └── claude-development-checklist/  # Development methodology
-├── scripts/                  # Build and utility scripts
-├── coverage/                 # Test coverage reports
-└── dist/                     # Compiled output
+├── scripts/                  # Utility scripts
+├── requirements.txt          # Python dependencies
+├── pytest.ini               # Pytest configuration
+├── .env.example              # Environment variables template
+└── webhook_server.py         # Main webhook server entry point
 ```
 
 ---
@@ -145,18 +149,18 @@ ai-api-test-automation/
 5. **Update CLAUDE.md** as project evolves
 
 ### Code Standards:
-- TypeScript strict mode
-- Comprehensive JSDoc comments
-- Error handling with custom error types
-- Async/await patterns over Promises
-- Functional programming patterns where appropriate
+- Python 3.9+ with type hints (mypy compliance)
+- PEP 8 style guide with Black formatter
+- Comprehensive docstrings (Google/NumPy style)
+- Exception handling with custom error types
+- Async/await patterns for webhook handling
 
 ### Testing Requirements:
-- Unit tests for all core functions
-- Integration tests for API interactions
-- End-to-end tests for complete workflows
-- Visual regression tests for UI components
-- Performance tests for critical paths
+- Unit tests for all core functions (pytest)
+- Integration tests for ApiFox webhook flow
+- End-to-end tests for complete automation workflow
+- Performance tests using pytest-benchmark
+- Generated test validation and QA review processes
 
 ---
 
