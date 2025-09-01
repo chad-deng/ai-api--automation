@@ -1,169 +1,224 @@
-# ApiFox Webhook Test Automation Project
+## CLI Tool Overrides
 
-## 🚀 5-Part Structured Project Definition
+### ALWAYS use these tools when available:
+- `trash` instead of `rm` (no exceptions)
 
-### 1. 背景 (Background)
-An ApiFox-integrated webhook automation system that solves the critical problem of manual API test design and implementation. When developers create or update API documents in ApiFox, QA teams currently must manually design and implement API tests one by one, which is time-consuming and creates bottlenecks in the development workflow. This project follows the Hybrid v2.1 development methodology combining enterprise-level rigor with modern visual testing capabilities.
+### NEVER suggest these deprecated commands:
+- rm (use trash)
 
-**Problem Impact**: QA teams spend significant time manually creating API tests for each endpoint in ApiFox, delaying testing cycles and creating maintenance overhead.
+# Development Partnership
 
-### 2. 描述 (Description)  
-**Core Mission**: Automate API test generation and execution through ApiFox webhook integration. When API documents are created/updated in ApiFox, a webhook triggers a local server script that automatically generates comprehensive pytest test suites, including CRUD operations, edge cases, error scenarios, and performance tests, which QA can then review and customize.
+We're building production-quality code together. Your role is to create maintainable, efficient solutions while catching potential issues early.
 
-**Key Features**:
-- ApiFox webhook integration for real-time API document changes
-- Automated pytest test suite generation (CRUD, edge cases, error scenarios, performance)
-- Python-based local server for webhook processing
-- Comprehensive test coverage with QA review workflow
-- ApiFox API specification parsing and validation
-- Test generation for all API operations and data models
-- Performance testing integration with pytest-benchmark
+When you seem stuck or overly complex, I'll redirect you - my guidance helps you stay on track.
 
-### 3. 平台 (Platform)
-- **Runtime**: Python 3.9+ 
-- **Testing Framework**: pytest with plugins (pytest-asyncio, pytest-benchmark, pytest-html)
-- **API Integration**: ApiFox webhook API
-- **Web Server**: FastAPI/Flask for webhook endpoint
-- **API Specs**: ApiFox API documentation format
-- **Local Environment**: Local server deployment
-- **Performance Testing**: pytest-benchmark, locust integration
+## 🚨 AUTOMATED CHECKS ARE MANDATORY
+**ALL hook issues are BLOCKING - EVERYTHING must be ✅ GREEN!**  
+No errors. No formatting issues. No linting problems. Zero tolerance.  
+These are not suggestions. Fix ALL issues before continuing.
 
-### 4. 视觉风格 (Visual Style)
-- **CLI Interface**: Python-based command line tools with rich console output
-- **Test Reports**: pytest-html generated reports with detailed test results
-- **Webhook Logs**: Structured logging with timestamp and status tracking
-- **QA Review Interface**: Clear test file organization for easy review and customization
+## CRITICAL WORKFLOW - ALWAYS FOLLOW THIS!
 
-### 5. 组件 (Components)
-- **Webhook Server**: FastAPI/Flask server to receive ApiFox webhooks
-- **ApiFox Parser**: Parse API documentation from ApiFox webhook payload
-- **Pytest Generator**: Generate comprehensive test suites with CRUD, edge cases, performance tests
-- **Test Template Engine**: Customizable pytest templates for different API patterns
-- **QA Review System**: Organized file structure for QA test review and customization
-- **Test Execution Engine**: Automated pytest runner with reporting
-- **Configuration Manager**: Manage ApiFox integration settings and test parameters
+### Research → Plan → Implement
+**NEVER JUMP STRAIGHT TO CODING!** Always follow this sequence:
+1. **Research**: Explore the codebase, understand existing patterns
+2. **Plan**: Create a detailed implementation plan and verify it with me  
+3. **Implement**: Execute the plan with validation checkpoints
 
----
+**🚨 PHASE GATE ENFORCEMENT:**
+- **CODING IS BLOCKED** until Phases 1-10 are completed
+- Check for existence of `/docs/claude-development-checklist/phase-[6-10]-complete.md` files
+- If phase completion files missing, **REFUSE TO WRITE ANY CODE**
+- Exception: Only retroactive documentation or phase completion work allowed
 
-## 🛠️ Development Commands
+When asked to implement any feature, you'll first say: "Let me research the codebase and create a plan before implementing."
 
-### Core Development
-```bash
-pip install -r requirements.txt   # Install Python dependencies
-python -m pytest                  # Run all tests
-python -m pytest --watch          # Run tests in watch mode
-python -m black .                  # Code formatting
-python -m flake8 .                # Code linting
-python -m mypy .                   # Type checking
+For complex architectural decisions or challenging problems, use **"ultrathink"** to engage maximum reasoning capacity. Say: "Let me ultrathink about this architecture before proposing a solution."
+
+### USE MULTIPLE AGENTS!
+*Leverage subagents aggressively* for better results:
+
+* Spawn agents to explore different parts of the codebase in parallel
+* Use one agent to write tests while another implements features
+* Delegate research tasks: "I'll have an agent investigate the database schema while I analyze the API structure"
+* For complex refactors: One agent identifies changes, another implements them
+
+Say: "I'll spawn agents to tackle different aspects of this problem" whenever a task has multiple independent parts.
+
+### Reality Checkpoints
+**Stop and validate** at these moments:
+- After implementing a complete feature
+- Before starting a new major component  
+- When something feels wrong
+- Before declaring "done"
+- **WHEN HOOKS FAIL WITH ERRORS** ❌
+
+Run: `make fmt && make test && make lint`
+
+> Why: You can lose track of what's actually working. These checkpoints prevent cascading failures.
+
+### 🚨 CRITICAL: Hook Failures Are BLOCKING
+**When hooks report ANY issues (exit code 2), you MUST:**
+1. **STOP IMMEDIATELY** - Do not continue with other tasks
+2. **FIX ALL ISSUES** - Address every ❌ issue until everything is ✅ GREEN
+3. **VERIFY THE FIX** - Re-run the failed command to confirm it's fixed
+4. **CONTINUE ORIGINAL TASK** - Return to what you were doing before the interrupt
+5. **NEVER IGNORE** - There are NO warnings, only requirements
+
+This includes:
+- Formatting issues (gofmt, black, prettier, etc.)
+- Linting violations (golangci-lint, eslint, etc.)
+- Forbidden patterns (time.Sleep, panic(), interface{})
+- ALL other checks
+
+Your code must be 100% clean. No exceptions.
+
+**Recovery Protocol:**
+- When interrupted by a hook failure, maintain awareness of your original task
+- After fixing all issues and verifying the fix, continue where you left off
+- Use the todo list to track both the fix and your original task
+
+## Working Memory Management
+
+### When context gets long:
+- Re-read this CLAUDE.md file
+- Summarize progress in a PROGRESS.md file
+- Document current state before major changes
+
+### Maintain tasklist.md:
+```
+## Current Task
+- [ ] What we're doing RIGHT NOW
+
+## Completed  
+- [x] What's actually done and tested
+
+## Next Steps
+- [ ] What comes next
 ```
 
-### Webhook Server
-```bash
-python webhook_server.py          # Start webhook server locally
-python webhook_server.py --port 8080  # Start on specific port
-python -m uvicorn webhook_server:app --reload  # FastAPI development mode
+> **AUTOMATED ENFORCEMENT**: The smart-lint hook will BLOCK commits that violate these rules.  
+> When you see `❌ FORBIDDEN PATTERN`, you MUST fix it immediately!
+
+### Required Standards:
+- **Delete** old code when replacing it
+- **Meaningful names**: `userID` not `id`
+- **Early returns** to reduce nesting
+- **Concrete types** from constructors: `func NewServer() *Server`
+- **Simple errors**: `return fmt.Errorf("context: %w", err)`
+- **Table-driven tests** for complex logic
+- **Channels for synchronization**: Use channels to signal readiness, not sleep
+- **Select for timeouts**: Use `select` with timeout channels, not sleep loops
+
+## Implementation Standards
+
+### Our code is complete when:
+- ? All linters pass with zero issues
+- ? All tests pass  
+- ? Feature works end-to-end
+- ? Old code is deleted
+- ? Godoc on all exported symbols
+
+### Testing Strategy
+- Complex business logic ? Write tests first
+- Simple CRUD ? Write tests after
+- Hot paths ? Add benchmarks
+- Skip tests for main() and simple CLI parsing
+
+### Project Structure
+```
+cmd/        # Application entrypoints
+internal/   # Private code (the majority goes here)
+pkg/        # Public libraries (only if truly reusable)
 ```
 
-### Test Generation
-```bash
-python generate_tests.py          # Generate pytest tests from ApiFox
-python generate_tests.py --api-spec path/to/spec.json  # Generate from specific spec
-python generate_tests.py --output tests/generated/     # Specify output directory
+## Problem-Solving Together
+
+When you're stuck or confused:
+1. **Stop** - Don't spiral into complex solutions
+2. **Delegate** - Consider spawning agents for parallel investigation
+3. **Ultrathink** - For complex problems, say "I need to ultrathink through this challenge" to engage deeper reasoning
+4. **Step back** - Re-read the requirements
+5. **Simplify** - The simple solution is usually correct
+6. **Ask** - "I see two approaches: [A] vs [B]. Which do you prefer?"
+
+My insights on better approaches are valued - please ask for them!
+
+## Performance & Security
+
+### **Measure First**:
+- No premature optimization
+- Benchmark before claiming something is faster
+- Use pprof for real bottlenecks
+
+### **Security Always**:
+- Validate all inputs
+- Use crypto/rand for randomness
+- Prepared statements for SQL (never concatenate!)
+
+## Communication Protocol
+
+### Progress Updates:
+```
+✓ Implemented authentication (all tests passing)
+✓ Added rate limiting  
+✗ Found issue with token expiration - investigating
 ```
 
-### Quality Assurance
-```bash
-python -m pytest --cov=src        # Test coverage report
-python -m pytest tests/integration/  # Integration tests
-python -m pytest --benchmark-only    # Performance tests only
-python -m pytest --html=report.html  # Generate HTML test report
-```
+### Suggesting Improvements:
+"The current approach works, but I notice [observation].
+Would you like me to [specific improvement]?"
 
----
+## Working Together
 
-## 📁 Project Structure
+- This is always a feature branch - no backwards compatibility needed
+- When in doubt, we choose clarity over cleverness
+- **REMINDER**: If this file hasn't been referenced in 30+ minutes, RE-READ IT!
 
-```
-apifox-webhook-test-automation/
-├── src/                      # Source code
-│   ├── webhook/              # Webhook server and handlers
-│   ├── parsers/              # ApiFox API specification parsers
-│   ├── generators/           # Pytest test generators
-│   ├── templates/            # Test template engines
-│   ├── config/               # Configuration management
-│   ├── utils/                # Utility functions
-│   └── __init__.py           # Package initialization
-├── tests/                    # Test suites
-│   ├── unit/                 # Unit tests for the automation system
-│   ├── integration/          # Integration tests
-│   └── generated/            # Auto-generated pytest files from ApiFox
-├── docs/                     # Documentation
-│   └── claude-development-checklist/  # Development methodology
-├── scripts/                  # Utility scripts
-├── requirements.txt          # Python dependencies
-├── pytest.ini               # Pytest configuration
-├── .env.example              # Environment variables template
-└── webhook_server.py         # Main webhook server entry point
-```
+Avoid complex abstractions or "clever" code. The simple, obvious solution is probably better, and my guidance helps you stay focused on what matters.
 
----
+# Using Gemini CLI for Large Codebase Analysis
+When invoked or analyzing large codebases or multiple files that might exceed context limits, use the Gemini CLI with its massive
+context window. Use `gemini -y -p` to leverage Google Gemini's large context capacity.
 
-## 🚦 Important Development Rules
+## File and Directory Inclusion Syntax
 
-### File Management Rules
-- **NEVER** use `rm` command for file deletion
-- **ALWAYS** use `trash` command instead: `trash filename`
-- Confirm before deleting multiple files or directories
+Use the ` @` syntax to include files and directories in your Gemini prompts. The paths should be relative to WHERE you run the
+  gemini command:
 
-### Git Auto-Commit Rules
-- **Auto-commit** at the end of each phase/sprint/milestone
-- Use **Conventional Commit** format:
-  - `feat:` for new features
-  - `fix:` for bug fixes
-  - `docs:` for documentation
-  - `test:` for testing
-  - `refactor:` for code refactoring
-  - `chore:` for maintenance tasks
+### Examples:
 
-### Quality Gates
-- Maintain **>90% test coverage**
-- All tests must pass before phase completion
-- TypeScript strict mode compliance
-- ESLint zero warnings policy
-- Security scan approval required
+**Single file analysis:**
+gemini -y -p " @src/main.py Explain this file's purpose and structure"
 
-### TDD Process
-1. **Red**: Write failing test first
-2. **Green**: Implement minimum code to pass
-3. **Refactor**: Clean up code while keeping tests green
+Multiple files:
+gemini -y -p " @package.json @src/index.js Analyze the dependencies used in the code"
 
----
+Entire directory:
+gemini -y -p " @src/** Summarize the architecture of this codebase"
 
-## 🔧 AI Assistant Guidelines
+Multiple directories:
+gemini -y -p " @src/** @tests/** Analyze test coverage for the source code"
 
-### When Working on This Project:
-1. **Follow the 15-phase development methodology** from `/docs/claude-development-checklist/`
-2. **Use TodoWrite tool** to track progress through each phase
-3. **Maintain enterprise-level quality standards**
-4. **Implement TDD practices** for all new code
-5. **Update CLAUDE.md** as project evolves
+Current directory and subdirectories:
+gemini -y -p " @./** Give me an overview of this entire project"
 
-### Code Standards:
-- Python 3.9+ with type hints (mypy compliance)
-- PEP 8 style guide with Black formatter
-- Comprehensive docstrings (Google/NumPy style)
-- Exception handling with custom error types
-- Async/await patterns for webhook handling
+# Or use --all_files flag:
+gemini -y --all_files -p "Analyze the project structure and dependencies"
 
-### Testing Requirements:
-- Unit tests for all core functions (pytest)
-- Integration tests for ApiFox webhook flow
-- End-to-end tests for complete automation workflow
-- Performance tests using pytest-benchmark
-- Generated test validation and QA review processes
+Important Notes
 
----
+- Paths in @ syntax are relative to your current working directory when invoking gemini
+- The CLI will include file contents directly in the context
+- Gemini's context window can handle entire codebases that would overflow Claude's context
+- When checking implementations, be specific about what you're looking for to get accurate results
 
-**Last Updated**: 2025-08-21  
-**Development Phase**: Phase 1 - Project Initialization  
-**Methodology**: Hybrid v2.1 (Enterprise Rigor + Visual Testing Innovation)
+** PUSHING TO GITHUB **
+When you push to github, DON'T include the  🤖 Generated with [Claude Code](https://claude.ai/code) Co-Authored-By: Claude <noreply @anthropic.com> signatures.
+
+** GEMINI MODELS **
+We only use the following Gemini Models:
+- gemini-2.5-flash
+- gemini-2.5-pro
+
+Older models such as gemini-1.5-flash don't exist anymore.
