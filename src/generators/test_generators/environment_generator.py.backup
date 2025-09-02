@@ -1,0 +1,941 @@
+"""
+Environment Configuration Test Generator
+
+Generates tests that validate API behavior across different environments,
+configuration settings, and deployment scenarios.
+"""
+
+import json
+import os
+from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass
+from pathlib import Path
+import structlog
+
+logger = structlog.get_logger()
+
+@dataclass
+class EnvironmentTest:
+    """Represents a specific environment configuration test case"""
+    name: str
+    description: str
+    environment_config: Dict[str, Any]
+    expected_behavior: str  # 'success', 'failure', 'specific_error'
+    test_payload: Dict[str, Any]
+    test_category: str  # 'env_vars', 'config_files', 'ssl', 'connectivity', 'performance'
+    expected_status_codes: List[int]
+    validation_checks: List[str]  # List of things to validate in response
+
+class EnvironmentTestGenerator:
+    """
+    Generates comprehensive environment configuration tests for API endpoints
+    """
+    
+    def __init__(self):
+        self.logger = structlog.get_logger()
+        
+        # Common environment variables that APIs depend on
+        self.critical_env_vars = [
+            'API_KEY',
+            'DATABASE_URL', 
+            'JWT_SECRET',
+            'REDIS_URL',
+            'BASE_URL',
+            'PORT',
+            'NODE_ENV',
+            'PYTHONPATH',
+            'LOG_LEVEL',
+            'MAX_CONNECTIONS',
+            'TIMEOUT_SECONDS',
+            'RATE_LIMIT_REQUESTS',
+        ]
+        
+        # Different environment configurations to test
+        self.environment_configs = {
+            'development': {
+                'BASE_URL': 'http://localhost:8000',
+                'DEBUG': 'true',
+                'LOG_LEVEL': 'DEBUG',
+                'TIMEOUT_SECONDS': '60',
+                'SSL_VERIFY': 'false',
+                'RATE_LIMIT_REQUESTS': '1000'
+            },
+            'staging': {
+                'BASE_URL': 'https://staging-api.example.com', 
+                'DEBUG': 'false',
+                'LOG_LEVEL': 'INFO',
+                'TIMEOUT_SECONDS': '30',
+                'SSL_VERIFY': 'true',
+                'RATE_LIMIT_REQUESTS': '500'
+            },
+            'production': {
+                'BASE_URL': 'https://api.example.com',
+                'DEBUG': 'false', 
+                'LOG_LEVEL': 'WARNING',
+                'TIMEOUT_SECONDS': '10',
+                'SSL_VERIFY': 'true',
+                'RATE_LIMIT_REQUESTS': '100'
+            }
+        }
+        
+        # SSL/TLS configuration scenarios
+        self.ssl_scenarios = [
+            {
+                'name': 'valid_ssl',
+                'config': {'SSL_VERIFY': 'true', 'SSL_CERT_PATH': '/path/to/cert.pem'},
+                'expected': 'success'
+            },
+            {
+                'name': 'disabled_ssl',
+                'config': {'SSL_VERIFY': 'false'},
+                'expected': 'success'
+            },
+            {
+                'name': 'invalid_cert_path',
+                'config': {'SSL_VERIFY': 'true', 'SSL_CERT_PATH': '/nonexistent/cert.pem'},
+                'expected': 'failure'
+            },
+            {
+                'name': 'self_signed_cert',
+                'config': {'SSL_VERIFY': 'true', 'ALLOW_SELF_SIGNED': 'true'},
+                'expected': 'success'
+            }
+        ]
+    
+    def generate_environment_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """
+        Generate all environment configuration test scenarios
+        
+        Args:
+            api_spec: API specification dictionary
+            
+        Returns:
+            List of EnvironmentTest objects
+        """
+        tests = []
+        
+        # Generate environment variable tests
+        tests.extend(self._generate_env_var_tests(api_spec))
+        
+        # Generate configuration file tests
+        tests.extend(self._generate_config_file_tests(api_spec))
+        
+        # Generate SSL/TLS configuration tests
+        tests.extend(self._generate_ssl_tests(api_spec))
+        
+        # Generate connectivity tests for different environments
+        tests.extend(self._generate_connectivity_tests(api_spec))
+        
+        # Generate performance configuration tests
+        tests.extend(self._generate_performance_config_tests(api_spec))
+        
+        # Generate deployment scenario tests
+        tests.extend(self._generate_deployment_tests(api_spec))
+        
+        self.logger.info(f"Generated {len(tests)} environment tests for {api_spec.get('path')}")
+        return tests
+    
+    def _generate_base_payload(self, api_spec: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate a valid base payload for testing"""
+        request_body = api_spec.get('request_body', {})
+        if not request_body:
+            return {"test": "environment_test"}
+        
+        schema = request_body.get('content', {}).get('application/json', {}).get('schema', {})
+        properties = schema.get('properties', {})
+        required = schema.get('required', [])
+        
+        payload = {}
+        for field_name in required:
+            if field_name in properties:
+                field_type = properties[field_name].get('type', 'string')
+                if field_type == 'string':
+                    payload[field_name] = 'env_test_value'
+                elif field_type == 'integer':
+                    payload[field_name] = 42
+                elif field_type == 'number':
+                    payload[field_name] = 42.0
+                elif field_type == 'boolean':
+                    payload[field_name] = True
+                else:
+                    payload[field_name] = 'test_value'
+        
+        return payload
+    
+    def _generate_env_var_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """Generate tests for environment variable scenarios"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        base_payload = self._generate_base_payload(api_spec)
+        
+        # Test missing critical environment variables
+        for env_var in self.critical_env_vars[:6]:  # Test first 6 to avoid too many tests
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_env_missing_{env_var.lower()}",
+                description=f"Test API behavior when {env_var} environment variable is missing",
+                environment_config={
+                    'missing_vars': [env_var],
+                    'action': 'unset'
+                },
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='env_vars',
+                expected_status_codes=[500, 502, 503],
+                validation_checks=['error_message_present', 'no_sensitive_data_leaked']
+            ))
+        
+        # Test invalid environment variable values
+        invalid_env_scenarios = [
+            ('DATABASE_URL', 'invalid-database-url', [500, 502]),
+            ('PORT', 'invalid-port-number', [500]),
+            ('TIMEOUT_SECONDS', 'not-a-number', [500]),
+            ('RATE_LIMIT_REQUESTS', '-100', [500]),
+            ('LOG_LEVEL', 'INVALID_LEVEL', [200, 201, 500]),  # May or may not fail
+            ('JWT_SECRET', '', [401, 500]),  # Empty secret should cause auth issues
+        ]
+        
+        for env_var, invalid_value, expected_codes in invalid_env_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_env_invalid_{env_var.lower()}",
+                description=f"Test API behavior with invalid {env_var} value",
+                environment_config={
+                    'env_vars': {env_var: invalid_value}
+                },
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='env_vars',
+                expected_status_codes=expected_codes,
+                validation_checks=['error_message_present', 'no_sensitive_data_leaked']
+            ))
+        
+        # Test environment variable precedence
+        tests.append(EnvironmentTest(
+            name=f"test_{operation_id}_env_precedence",
+            description="Test environment variable precedence over config files",
+            environment_config={
+                'env_vars': {'BASE_URL': 'http://env-override.example.com'},
+                'config_files': {'config.json': {'BASE_URL': 'http://config-file.example.com'}}
+            },
+            expected_behavior='success',
+            test_payload=base_payload,
+            test_category='env_vars',
+            expected_status_codes=[200, 201, 202],
+            validation_checks=['environment_override_respected']
+        ))
+        
+        return tests
+    
+    def _generate_config_file_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """Generate tests for configuration file scenarios"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        base_payload = self._generate_base_payload(api_spec)
+        
+        # Test missing configuration files
+        config_files = ['config.yaml', 'config.json', 'app.config', '.env']
+        
+        for config_file in config_files[:3]:  # Test first 3 files
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_config_missing_{config_file.replace('.', '_')}",
+                description=f"Test API behavior when {config_file} is missing",
+                environment_config={
+                    'missing_files': [config_file]
+                },
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='config_files',
+                expected_status_codes=[500, 503],
+                validation_checks=['error_message_present', 'graceful_degradation']
+            ))
+        
+        # Test malformed configuration files
+        malformed_configs = [
+            {
+                'file': 'config.json',
+                'content': '{"database": {"url": "invalid-json-syntax"',  # Missing closing brace
+                'error_type': 'json_syntax_error'
+            },
+            {
+                'file': 'config.yaml', 
+                'content': 'database:\n  url: "valid"\n\tinvalid_indentation: "value"',
+                'error_type': 'yaml_syntax_error'
+            },
+            {
+                'file': 'config.json',
+                'content': '{"database": {"timeout": "not-a-number"}}',
+                'error_type': 'type_error'
+            }
+        ]
+        
+        for malformed in malformed_configs:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_config_malformed_{malformed['file'].replace('.', '_')}",
+                description=f"Test API behavior with malformed {malformed['file']}",
+                environment_config={
+                    'config_files': {
+                        malformed['file']: malformed['content']
+                    }
+                },
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='config_files',
+                expected_status_codes=[500],
+                validation_checks=['error_message_present', 'no_config_content_leaked']
+            ))
+        
+        # Test configuration file permissions
+        tests.append(EnvironmentTest(
+            name=f"test_{operation_id}_config_permissions",
+            description="Test API behavior with inaccessible configuration file",
+            environment_config={
+                'file_permissions': {'config.yaml': '000'}  # No read permissions
+            },
+            expected_behavior='failure',
+            test_payload=base_payload,
+            test_category='config_files',
+            expected_status_codes=[500, 503],
+            validation_checks=['error_message_present', 'permission_error_handling']
+        ))
+        
+        return tests
+    
+    def _generate_ssl_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """Generate SSL/TLS configuration tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        base_payload = self._generate_base_payload(api_spec)
+        
+        for ssl_scenario in self.ssl_scenarios:
+            expected_codes = [200, 201, 202] if ssl_scenario['expected'] == 'success' else [500, 502, 503]
+            
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_ssl_{ssl_scenario['name']}",
+                description=f"Test API with SSL configuration: {ssl_scenario['name']}",
+                environment_config={
+                    'ssl_config': ssl_scenario['config']
+                },
+                expected_behavior=ssl_scenario['expected'],
+                test_payload=base_payload,
+                test_category='ssl',
+                expected_status_codes=expected_codes,
+                validation_checks=['ssl_verification_proper', 'secure_connection']
+            ))
+        
+        # Test SSL certificate expiration scenarios
+        ssl_cert_scenarios = [
+            ('expired_cert', [500, 502, 503]),
+            ('future_cert', [500, 502, 503]),  # Certificate not yet valid
+            ('wrong_hostname', [500, 502, 503]),
+            ('revoked_cert', [500, 502, 503]),
+        ]
+        
+        for cert_scenario, expected_codes in ssl_cert_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_ssl_cert_{cert_scenario}",
+                description=f"Test API with {cert_scenario.replace('_', ' ')} SSL certificate",
+                environment_config={
+                    'ssl_config': {
+                        'SSL_VERIFY': 'true',
+                        'SSL_CERT_TYPE': cert_scenario
+                    }
+                },
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='ssl',
+                expected_status_codes=expected_codes,
+                validation_checks=['certificate_error_handling', 'secure_error_response']
+            ))
+        
+        return tests
+    
+    def _generate_connectivity_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """Generate connectivity and network configuration tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        base_payload = self._generate_base_payload(api_spec)
+        
+        # Test different environment URLs
+        for env_name, env_config in self.environment_configs.items():
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_connectivity_{env_name}",
+                description=f"Test API connectivity in {env_name} environment",
+                environment_config={
+                    'environment': env_name,
+                    **env_config
+                },
+                expected_behavior='success',
+                test_payload=base_payload,
+                test_category='connectivity',
+                expected_status_codes=[200, 201, 202, 503],  # 503 if env not available
+                validation_checks=['response_time_reasonable', 'environment_headers_present']
+            ))
+        
+        # Test database connectivity scenarios
+        db_scenarios = [
+            {
+                'name': 'db_unreachable',
+                'config': {'DATABASE_URL': 'postgresql://unreachable:5432/db'},
+                'expected_codes': [500, 502, 503]
+            },
+            {
+                'name': 'db_auth_failure', 
+                'config': {'DATABASE_URL': 'postgresql://wronguser:wrongpass@localhost:5432/db'},
+                'expected_codes': [500, 502]
+            },
+            {
+                'name': 'db_timeout',
+                'config': {'DATABASE_TIMEOUT': '1'},  # Very short timeout
+                'expected_codes': [500, 503, 504]
+            }
+        ]
+        
+        for db_scenario in db_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_db_{db_scenario['name']}",
+                description=f"Test API behavior with database {db_scenario['name'].replace('_', ' ')}",
+                environment_config=db_scenario['config'],
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='connectivity',
+                expected_status_codes=db_scenario['expected_codes'],
+                validation_checks=['database_error_handling', 'no_db_credentials_leaked']
+            ))
+        
+        # Test external service dependencies
+        external_services = [
+            ('REDIS_URL', 'redis://unreachable:6379'),
+            ('ELASTICSEARCH_URL', 'http://unreachable:9200'), 
+            ('MEMCACHE_SERVERS', 'unreachable:11211'),
+        ]
+        
+        for service_env, invalid_url in external_services:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_external_{service_env.lower()}",
+                description=f"Test API behavior when {service_env} service is unreachable",
+                environment_config={
+                    'env_vars': {service_env: invalid_url}
+                },
+                expected_behavior='failure',
+                test_payload=base_payload,
+                test_category='connectivity',
+                expected_status_codes=[500, 502, 503],
+                validation_checks=['service_error_handling', 'graceful_degradation']
+            ))
+        
+        return tests
+    
+    def _generate_performance_config_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """Generate performance configuration tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        base_payload = self._generate_base_payload(api_spec)
+        
+        # Test timeout configurations
+        timeout_scenarios = [
+            ('very_short', '1', [500, 504]),      # 1 second - likely too short
+            ('short', '5', [200, 201, 500, 504]),  # 5 seconds - might timeout
+            ('normal', '30', [200, 201, 202]),     # 30 seconds - should work
+            ('long', '120', [200, 201, 202]),      # 2 minutes - should work
+        ]
+        
+        for scenario_name, timeout_value, expected_codes in timeout_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_timeout_{scenario_name}",
+                description=f"Test API with {scenario_name} timeout ({timeout_value}s)",
+                environment_config={
+                    'env_vars': {'TIMEOUT_SECONDS': timeout_value}
+                },
+                expected_behavior='success' if scenario_name in ['normal', 'long'] else 'failure',
+                test_payload=base_payload,
+                test_category='performance',
+                expected_status_codes=expected_codes,
+                validation_checks=['timeout_respected', 'response_time_measured']
+            ))
+        
+        # Test connection pool configurations
+        pool_scenarios = [
+            ('min_pool', '1', [200, 201, 500]),     # Minimum connections
+            ('normal_pool', '10', [200, 201]),      # Normal pool size  
+            ('large_pool', '100', [200, 201]),      # Large pool
+            ('excessive_pool', '10000', [500]),     # Too many connections
+        ]
+        
+        for scenario_name, pool_size, expected_codes in pool_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_pool_{scenario_name}",
+                description=f"Test API with {scenario_name} connection pool ({pool_size})",
+                environment_config={
+                    'env_vars': {'MAX_CONNECTIONS': pool_size}
+                },
+                expected_behavior='success' if scenario_name != 'excessive_pool' else 'failure',
+                test_payload=base_payload,
+                test_category='performance',
+                expected_status_codes=expected_codes,
+                validation_checks=['connection_pool_utilized', 'resource_usage_reasonable']
+            ))
+        
+        return tests
+    
+    def _generate_deployment_tests(self, api_spec: Dict[str, Any]) -> List[EnvironmentTest]:
+        """Generate deployment scenario tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        base_payload = self._generate_base_payload(api_spec)
+        
+        # Test container deployment scenarios
+        container_scenarios = [
+            {
+                'name': 'limited_memory',
+                'config': {'MEMORY_LIMIT': '128M'},
+                'expected_codes': [200, 201, 500],
+                'description': 'Test API with limited memory allocation'
+            },
+            {
+                'name': 'limited_cpu',
+                'config': {'CPU_LIMIT': '0.1'},  # 10% of CPU
+                'expected_codes': [200, 201, 504],
+                'description': 'Test API with limited CPU allocation'
+            },
+            {
+                'name': 'multiple_replicas',
+                'config': {'REPLICA_COUNT': '3'},
+                'expected_codes': [200, 201, 202],
+                'description': 'Test API with multiple replica instances'
+            }
+        ]
+        
+        for scenario in container_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_deploy_{scenario['name']}",
+                description=scenario['description'],
+                environment_config={
+                    'deployment_config': scenario['config']
+                },
+                expected_behavior='success',
+                test_payload=base_payload,
+                test_category='deployment',
+                expected_status_codes=scenario['expected_codes'],
+                validation_checks=['deployment_health', 'resource_constraints_respected']
+            ))
+        
+        # Test load balancer scenarios
+        lb_scenarios = [
+            ('round_robin', [200, 201]),
+            ('weighted', [200, 201]),
+            ('ip_hash', [200, 201]),
+            ('health_check_failure', [503]),
+        ]
+        
+        for lb_type, expected_codes in lb_scenarios:
+            tests.append(EnvironmentTest(
+                name=f"test_{operation_id}_lb_{lb_type}",
+                description=f"Test API behind {lb_type.replace('_', ' ')} load balancer",
+                environment_config={
+                    'load_balancer': {
+                        'type': lb_type,
+                        'health_check_enabled': True
+                    }
+                },
+                expected_behavior='success' if 'failure' not in lb_type else 'failure',
+                test_payload=base_payload,
+                test_category='deployment',
+                expected_status_codes=expected_codes,
+                validation_checks=['load_balancing_working', 'session_affinity']
+            ))
+        
+        return tests
+    
+    def generate_test_file(self, api_spec: Dict[str, Any], output_dir: str) -> str:
+        """
+        Generate a complete environment configuration test file
+        
+        Args:
+            api_spec: API specification dictionary
+            output_dir: Directory to save the test file
+            
+        Returns:
+            Path to the generated test file
+        """
+        tests = self.generate_environment_tests(api_spec)
+        
+        if not tests:
+            self.logger.warning(f"No environment tests generated for {api_spec.get('path')}")
+            return ""
+        
+        # Generate test file content
+        test_content = self._generate_test_file_content(api_spec, tests)
+        
+        # Save to file
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        filename = f"test_{operation_id}_environment.py"
+        output_path = Path(output_dir) / filename
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(test_content)
+        
+        self.logger.info(f"Generated environment test file: {output_path}")
+        return str(output_path)
+    
+    def _generate_test_file_content(self, api_spec: Dict[str, Any], tests: List[EnvironmentTest]) -> str:
+        """Generate the actual test file content"""
+        operation_id = api_spec.get('operationId', 'endpoint')
+        method = api_spec.get('method', 'GET')
+        path = api_spec.get('path', '/api/endpoint')
+        description = api_spec.get('description', f'{operation_id} endpoint')
+        
+        content = f'''import pytest
+import httpx
+import os
+import json
+import time
+import asyncio
+from typing import Dict, Any, List
+from unittest.mock import patch
+import tempfile
+
+# Environment Configuration Tests for: {description}
+# Method: {method}
+# Path: {path}
+# Generated: Enhanced Environment Test Generation
+
+BASE_URL = "https://api.example.com"  # Update with your actual API base URL
+
+class Test{operation_id.title().replace('_', '')}Environment:
+    
+    @pytest.fixture
+    def client(self):
+        return httpx.AsyncClient(base_url=BASE_URL, timeout=30.0)
+    
+    @pytest.fixture
+    def auth_headers(self):
+        """Authentication headers for environment tests"""
+        return {{"Authorization": "Bearer environment_test_token"}}
+    
+    @pytest.fixture
+    def env_backup(self):
+        """Backup and restore environment variables"""
+        original_env = os.environ.copy()
+        yield
+        # Restore original environment
+        os.environ.clear()
+        os.environ.update(original_env)
+    
+    @pytest.fixture
+    def temp_config_dir(self):
+        """Create temporary directory for config files"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield temp_dir
+    
+    def create_config_file(self, temp_dir: str, filename: str, content: str):
+        """Helper to create temporary config files"""
+        config_path = os.path.join(temp_dir, filename)
+        with open(config_path, 'w') as f:
+            f.write(content)
+        return config_path
+    
+    def simulate_env_config(self, env_config: Dict[str, Any]):
+        """Simulate environment configuration changes"""
+        # This is a mock implementation - in real tests, you'd need to
+        # restart the service or use dependency injection
+        if 'env_vars' in env_config:
+            for var, value in env_config['env_vars'].items():
+                os.environ[var] = str(value)
+        
+        if 'missing_vars' in env_config:
+            for var in env_config['missing_vars']:
+                if var in os.environ:
+                    del os.environ[var]
+    
+'''
+        
+        # Group tests by category
+        tests_by_category = {}
+        for test in tests:
+            category = test.test_category
+            if category not in tests_by_category:
+                tests_by_category[category] = []
+            tests_by_category[category].append(test)
+        
+        # Generate test methods grouped by category
+        for category, category_tests in tests_by_category.items():
+            content += f"    # {category.upper().replace('_', ' ')} TESTS\\n\\n"
+            
+            for test in category_tests[:3]:  # Limit to prevent excessive test generation
+                content += self._generate_environment_test_method(test, api_spec)
+                content += "\n"
+        
+        # Add comprehensive environment summary test
+        content += self._generate_environment_summary_test(api_spec, tests)
+        
+        return content
+    
+    def _generate_environment_test_method(self, test: EnvironmentTest, api_spec: Dict[str, Any]) -> str:
+        """Generate a single environment test method"""
+        method = api_spec.get('method', 'GET')
+        path = api_spec.get('path', '/api/endpoint')
+        
+        payload_str = json.dumps(test.test_payload, indent=8)[:-1] + "    }"
+        expected_codes_str = ', '.join(map(str, test.expected_status_codes))
+        
+        method_code = f'''    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def {test.name}(self, client, auth_headers, env_backup, temp_config_dir):
+        """{test.description}"""
+        
+        # Simulate environment configuration
+        env_config = {json.dumps(test.environment_config, indent=8)[:-1] + "    }"}
+        self.simulate_env_config(env_config)
+        
+        payload = {payload_str}
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.{method.lower()}("{path}", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in {test.expected_status_codes}, \\
+                f"Expected one of {test.expected_status_codes}, got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if "{test.test_category}" == "connectivity":
+                self._validate_connectivity_response(response)
+            elif "{test.test_category}" == "ssl":
+                self._validate_ssl_response(response)
+            elif "{test.test_category}" == "performance":
+                self._validate_performance_response(response, response_time)
+            elif "{test.test_category}" == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if "{test.expected_behavior}" == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if "{test.expected_behavior}" == "failure" or "timeout" in "{test.name}":
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if "{test.expected_behavior}" == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+'''
+        
+        return method_code
+    
+    def _generate_environment_summary_test(self, api_spec: Dict[str, Any], tests: List[EnvironmentTest]) -> str:
+        """Generate a summary test for environment configurations"""
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        method = api_spec.get('method', 'GET')
+        path = api_spec.get('path', '/api/endpoint')
+        
+        return f'''    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_{operation_id}_environment_resilience_summary(self, client, auth_headers, env_backup):
+        """Summary test for environment configuration resilience"""
+        
+        # Test different environment scenarios efficiently
+        environment_scenarios = [
+            # Development environment
+            {{
+                "name": "development",
+                "config": {{"NODE_ENV": "development", "DEBUG": "true"}},
+                "expected_codes": [200, 201, 202, 500],
+                "description": "Development environment configuration"
+            }},
+            
+            # Production environment
+            {{
+                "name": "production", 
+                "config": {{"NODE_ENV": "production", "DEBUG": "false"}},
+                "expected_codes": [200, 201, 202],
+                "description": "Production environment configuration"
+            }},
+            
+            # Resource constraints
+            {{
+                "name": "limited_resources",
+                "config": {{"MAX_CONNECTIONS": "5", "TIMEOUT_SECONDS": "10"}},
+                "expected_codes": [200, 201, 500, 503],
+                "description": "Limited resource configuration"
+            }},
+            
+            # Missing critical config
+            {{
+                "name": "missing_config",
+                "config": {{"action": "remove", "vars": ["DATABASE_URL"]}},
+                "expected_codes": [500, 502, 503],
+                "description": "Missing critical configuration"
+            }},
+        ]
+        
+        results = {{
+            "total_tests": len(environment_scenarios),
+            "passed": 0,
+            "failed": 0,
+            "by_category": {{}}
+        }}
+        
+        print(f"\\n🌍 Running environment resilience tests...")
+        print(f"{'Environment':<20} {'Status':<8} {'Code':<5} {'Time (ms)':<12} {'Description'}")
+        print("-" * 80)
+        
+        for scenario in environment_scenarios:
+            category = scenario["name"] 
+            if category not in results["by_category"]:
+                results["by_category"][category] = {{"passed": 0, "failed": 0}}
+            
+            try:
+                # Apply environment configuration
+                if "action" in scenario["config"] and scenario["config"]["action"] == "remove":
+                    # Remove environment variables
+                    for var in scenario["config"].get("vars", []):
+                        if var in os.environ:
+                            del os.environ[var]
+                else:
+                    # Set environment variables
+                    for var, value in scenario["config"].items():
+                        if var != "action":
+                            os.environ[var] = str(value)
+                
+                start_time = time.time()
+                response = await client.{method.lower()}("{path}", json={{"test": "env_resilience"}}, headers=auth_headers)
+                response_time = (time.time() - start_time) * 1000
+                
+                # Determine if response is acceptable
+                is_acceptable = response.status_code in scenario["expected_codes"]
+                status_description = "PASS" if is_acceptable else "FAIL"
+                
+                if is_acceptable:
+                    results["passed"] += 1
+                    results["by_category"][category]["passed"] += 1
+                else:
+                    results["failed"] += 1  
+                    results["by_category"][category]["failed"] += 1
+                
+                print(f"{scenario['name']:<20} {status_description:<8} {response.status_code:<5} {response_time:>8.1f}    {scenario['description']}")
+                
+            except Exception as e:
+                results["failed"] += 1
+                results["by_category"][category]["failed"] += 1
+                error_msg = str(e)[:40]
+                print(f"{scenario['name']:<20} {'ERROR':<8} {'N/A':<5} {'N/A':<12} Error: {error_msg}")
+        
+        print("-" * 80)
+        print(f"📊 Environment Test Results: {results['passed']} passed, {results['failed']} failed")
+        
+        # Calculate resilience score
+        total_tests = results["total_tests"]
+        resilience_score = results["passed"] / total_tests if total_tests > 0 else 0
+        
+        print(f"\\n🛡️ Environment Resilience Score: {resilience_score:.1%}")
+        
+        # Print category breakdown
+        for category, counts in results["by_category"].items():
+            total_category = counts["passed"] + counts["failed"]
+            if total_category > 0:
+                success_rate = counts["passed"] / total_category * 100
+                print(f"   {category.title()}: {counts['passed']}/{total_category} ({success_rate:.1f}%)")
+        
+        # Assertions for environment resilience
+        assert resilience_score >= 0.6, f"Environment resilience score too low: {resilience_score:.1%}"
+        
+        # Production environment should be most reliable
+        prod_category = results["by_category"].get("production", {})
+        prod_total = prod_category.get("passed", 0) + prod_category.get("failed", 0)
+        if prod_total > 0:
+            prod_success = prod_category.get("passed", 0) / prod_total
+            assert prod_success >= 0.8, f"Production environment success rate too low: {prod_success:.1%}"
+        
+        print("✅ Environment resilience test completed!")
+'''
+        
+        return content

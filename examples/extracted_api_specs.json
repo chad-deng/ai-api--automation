@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Get User Profile",
+    "method": "GET",
+    "path": "/api/v1/users/{id}",
+    "description": "Retrieve user profile information",
+    "operationId": "get_user_profile"
+  },
+  {
+    "name": "Create User",
+    "method": "POST",
+    "path": "/api/v1/users",
+    "description": "Create a new user account",
+    "operationId": "create_user"
+  },
+  {
+    "name": "Create User Profile Basic",
+    "method": "POST",
+    "path": "/api/v1/users",
+    "description": "Create a new user profile with comprehensive validation",
+    "operationId": "create_user_profile_basic"
+  },
+  {
+    "name": "Create User Profile Crud",
+    "method": "POST",
+    "path": "/api/v1/users",
+    "description": "Create a new user profile with comprehensive validation",
+    "operationId": "create_user_profile_crud"
+  },
+  {
+    "name": "Create User Profile Error Scenarios",
+    "method": "POST",
+    "path": "/api/v1/users",
+    "description": "Create a new user profile with comprehensive validation",
+    "operationId": "create_user_profile_error_scenarios"
+  },
+  {
+    "name": "Create User Profile Authentication",
+    "method": "POST",
+    "path": "/api/v1/users",
+    "description": "Create a new user profile with comprehensive validation",
+    "operationId": "create_user_profile_authentication"
+  }
+]

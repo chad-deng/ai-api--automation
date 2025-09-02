@@ -1,0 +1,935 @@
+"""
+Concurrency Test Generator
+
+Generates tests that validate API behavior under concurrent load,
+race conditions, and parallel access scenarios.
+"""
+
+import json
+import asyncio
+import time
+import random
+from typing import Dict, Any, List, Optional, Tuple, Callable
+from dataclasses import dataclass
+from pathlib import Path
+import structlog
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+logger = structlog.get_logger()
+
+@dataclass
+class ConcurrencyTest:
+    """Represents a specific concurrency test case"""
+    name: str
+    description: str
+    test_payload: Dict[str, Any]
+    concurrent_users: int
+    requests_per_user: int
+    test_category: str  # 'race_condition', 'load_burst', 'resource_contention', 'deadlock'
+    expected_behavior: str  # 'all_succeed', 'some_fail', 'orderly_queue', 'race_detected'
+    validation_checks: List[str]
+    test_duration_seconds: int = 30
+
+class ConcurrencyTestGenerator:
+    """
+    Generates comprehensive concurrency tests for API endpoints
+    """
+    
+    def __init__(self):
+        self.logger = structlog.get_logger()
+        
+        # Different concurrency scenarios to test
+        self.concurrency_scenarios = {
+            'light_load': {'users': 5, 'requests_per_user': 10},
+            'moderate_load': {'users': 10, 'requests_per_user': 20},
+            'heavy_load': {'users': 25, 'requests_per_user': 30},
+            'burst_load': {'users': 50, 'requests_per_user': 5},
+            'sustained_load': {'users': 15, 'requests_per_user': 100},
+        }
+        
+        # Race condition test patterns
+        self.race_condition_patterns = [
+            {
+                'name': 'read_modify_write',
+                'description': 'Multiple users modifying the same resource simultaneously',
+                'operations': ['read', 'modify', 'write']
+            },
+            {
+                'name': 'counter_increment',
+                'description': 'Multiple users incrementing a counter simultaneously',  
+                'operations': ['read_counter', 'increment', 'write_counter']
+            },
+            {
+                'name': 'resource_creation',
+                'description': 'Multiple users creating resources with same identifier',
+                'operations': ['check_exists', 'create_resource']
+            },
+            {
+                'name': 'inventory_update',
+                'description': 'Multiple users updating inventory simultaneously',
+                'operations': ['check_stock', 'reserve_item', 'update_inventory']
+            }
+        ]
+    
+    def generate_concurrency_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """
+        Generate all concurrency test scenarios for an API endpoint
+        
+        Args:
+            api_spec: API specification dictionary
+            
+        Returns:
+            List of ConcurrencyTest objects
+        """
+        tests = []
+        
+        # Generate basic load tests
+        tests.extend(self._generate_load_tests(api_spec))
+        
+        # Generate race condition tests
+        tests.extend(self._generate_race_condition_tests(api_spec))
+        
+        # Generate resource contention tests
+        tests.extend(self._generate_resource_contention_tests(api_spec))
+        
+        # Generate deadlock scenario tests
+        tests.extend(self._generate_deadlock_tests(api_spec))
+        
+        # Generate burst traffic tests
+        tests.extend(self._generate_burst_tests(api_spec))
+        
+        # Generate sustained load tests
+        tests.extend(self._generate_sustained_load_tests(api_spec))
+        
+        self.logger.info(f"Generated {len(tests)} concurrency tests for {api_spec.get('path')}")
+        return tests
+    
+    def _generate_base_payload(self, api_spec: Dict[str, Any], variation: str = '') -> Dict[str, Any]:
+        """Generate a valid base payload with optional variation"""
+        request_body = api_spec.get('request_body', {})
+        if not request_body:
+            return {"test": f"concurrency_test_{variation}", "timestamp": int(time.time())}
+        
+        schema = request_body.get('content', {}).get('application/json', {}).get('schema', {})
+        properties = schema.get('properties', {})
+        required = schema.get('required', [])
+        
+        payload = {}
+        for field_name in required:
+            if field_name in properties:
+                field_type = properties[field_name].get('type', 'string')
+                if field_type == 'string':
+                    payload[field_name] = f'concurrent_test_{variation}_{int(time.time())}'
+                elif field_type == 'integer':
+                    payload[field_name] = random.randint(1, 10000)
+                elif field_type == 'number':
+                    payload[field_name] = round(random.uniform(1.0, 100.0), 2)
+                elif field_type == 'boolean':
+                    payload[field_name] = random.choice([True, False])
+                else:
+                    payload[field_name] = f'test_value_{variation}'
+        
+        # Add timestamp for uniqueness tracking
+        payload['_test_id'] = f"{variation}_{int(time.time() * 1000)}"
+        
+        return payload
+    
+    def _generate_load_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """Generate basic load tests with different user counts"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        
+        for scenario_name, scenario_config in self.concurrency_scenarios.items():
+            base_payload = self._generate_base_payload(api_spec, scenario_name)
+            
+            tests.append(ConcurrencyTest(
+                name=f"test_{operation_id}_concurrency_{scenario_name}",
+                description=f"Test {scenario_name.replace('_', ' ')} with {scenario_config['users']} users",
+                test_payload=base_payload,
+                concurrent_users=scenario_config['users'],
+                requests_per_user=scenario_config['requests_per_user'],
+                test_category='load_burst',
+                expected_behavior='all_succeed' if 'light' in scenario_name else 'some_fail',
+                validation_checks=['response_time_reasonable', 'no_data_corruption', 'error_rate_acceptable'],
+                test_duration_seconds=30 if 'sustained' not in scenario_name else 60
+            ))
+        
+        return tests
+    
+    def _generate_race_condition_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """Generate race condition tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        method = api_spec.get('method', 'GET').upper()
+        
+        # Only generate race condition tests for state-modifying operations
+        if method not in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            return tests
+        
+        for race_pattern in self.race_condition_patterns:
+            base_payload = self._generate_base_payload(api_spec, race_pattern['name'])
+            
+            # Add shared resource identifier to create race conditions
+            base_payload['shared_resource_id'] = f"race_test_resource_{int(time.time())}"
+            
+            tests.append(ConcurrencyTest(
+                name=f"test_{operation_id}_race_{race_pattern['name']}",
+                description=f"Test race condition: {race_pattern['description']}",
+                test_payload=base_payload,
+                concurrent_users=10,  # Moderate number for race detection
+                requests_per_user=5,   # Multiple attempts per user
+                test_category='race_condition',
+                expected_behavior='race_detected',
+                validation_checks=['data_consistency', 'race_condition_handling', 'atomic_operations'],
+                test_duration_seconds=20
+            ))
+        
+        return tests
+    
+    def _generate_resource_contention_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """Generate resource contention tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        
+        # Test scenarios that cause resource contention
+        contention_scenarios = [
+            {
+                'name': 'database_connection_pool',
+                'users': 50,  # Exceed typical connection pool size
+                'requests': 10,
+                'description': 'Test database connection pool under pressure'
+            },
+            {
+                'name': 'file_system_access',
+                'users': 20,
+                'requests': 15,
+                'description': 'Test file system resource contention'
+            },
+            {
+                'name': 'memory_intensive',
+                'users': 15,
+                'requests': 20,
+                'description': 'Test memory resource contention'
+            },
+            {
+                'name': 'external_api_calls',
+                'users': 30,
+                'requests': 8,
+                'description': 'Test external service rate limiting'
+            }
+        ]
+        
+        for scenario in contention_scenarios:
+            base_payload = self._generate_base_payload(api_spec, scenario['name'])
+            
+            # Add large data to increase resource usage
+            if 'memory' in scenario['name']:
+                base_payload['large_data'] = 'x' * 10000  # 10KB of data
+            
+            tests.append(ConcurrencyTest(
+                name=f"test_{operation_id}_contention_{scenario['name']}",
+                description=scenario['description'],
+                test_payload=base_payload,
+                concurrent_users=scenario['users'],
+                requests_per_user=scenario['requests'],
+                test_category='resource_contention',
+                expected_behavior='orderly_queue',
+                validation_checks=['resource_management', 'queue_behavior', 'timeout_handling'],
+                test_duration_seconds=45
+            ))
+        
+        return tests
+    
+    def _generate_deadlock_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """Generate deadlock scenario tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        method = api_spec.get('method', 'GET').upper()
+        
+        # Deadlocks are primarily relevant for state-modifying operations
+        if method not in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            return tests
+        
+        # Scenarios that might cause deadlocks
+        deadlock_scenarios = [
+            {
+                'name': 'circular_dependency',
+                'description': 'Test circular resource dependency scenario',
+                'users': 8,
+                'requests': 5
+            },
+            {
+                'name': 'nested_transactions',
+                'description': 'Test nested transaction deadlock',
+                'users': 6,
+                'requests': 10
+            },
+            {
+                'name': 'lock_ordering',
+                'description': 'Test different lock acquisition orders',
+                'users': 10,
+                'requests': 8
+            }
+        ]
+        
+        for scenario in deadlock_scenarios:
+            base_payload = self._generate_base_payload(api_spec, scenario['name'])
+            
+            # Add multiple resource references to increase deadlock probability
+            base_payload['resource_a'] = f"resource_a_{random.randint(1, 5)}"
+            base_payload['resource_b'] = f"resource_b_{random.randint(1, 5)}"
+            
+            tests.append(ConcurrencyTest(
+                name=f"test_{operation_id}_deadlock_{scenario['name']}",
+                description=scenario['description'],
+                test_payload=base_payload,
+                concurrent_users=scenario['users'],
+                requests_per_user=scenario['requests'],
+                test_category='deadlock',
+                expected_behavior='some_fail',  # Some requests should timeout or fail
+                validation_checks=['deadlock_detection', 'timeout_reasonable', 'recovery_possible'],
+                test_duration_seconds=30
+            ))
+        
+        return tests
+    
+    def _generate_burst_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """Generate sudden traffic burst tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        
+        burst_scenarios = [
+            {
+                'name': 'flash_traffic',
+                'users': 100,
+                'requests': 3,
+                'description': 'Sudden flash of traffic (flash sale scenario)'
+            },
+            {
+                'name': 'ddos_simulation',
+                'users': 200,
+                'requests': 2,
+                'description': 'DDoS-like traffic pattern simulation'
+            },
+            {
+                'name': 'viral_content',
+                'users': 75,
+                'requests': 5,
+                'description': 'Viral content access pattern'
+            }
+        ]
+        
+        for scenario in burst_scenarios:
+            base_payload = self._generate_base_payload(api_spec, scenario['name'])
+            
+            tests.append(ConcurrencyTest(
+                name=f"test_{operation_id}_burst_{scenario['name']}",
+                description=scenario['description'],
+                test_payload=base_payload,
+                concurrent_users=scenario['users'],
+                requests_per_user=scenario['requests'],
+                test_category='load_burst',
+                expected_behavior='some_fail',  # System should gracefully handle overload
+                validation_checks=['rate_limiting_active', 'graceful_degradation', 'error_responses_proper'],
+                test_duration_seconds=15  # Short burst
+            ))
+        
+        return tests
+    
+    def _generate_sustained_load_tests(self, api_spec: Dict[str, Any]) -> List[ConcurrencyTest]:
+        """Generate sustained load tests"""
+        tests = []
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        
+        sustained_scenarios = [
+            {
+                'name': 'steady_state',
+                'users': 20,
+                'requests': 50,
+                'description': 'Steady state continuous load'
+            },
+            {
+                'name': 'gradual_ramp',
+                'users': 30,
+                'requests': 40,
+                'description': 'Gradually increasing load pattern'
+            }
+        ]
+        
+        for scenario in sustained_scenarios:
+            base_payload = self._generate_base_payload(api_spec, scenario['name'])
+            
+            tests.append(ConcurrencyTest(
+                name=f"test_{operation_id}_sustained_{scenario['name']}",
+                description=scenario['description'],
+                test_payload=base_payload,
+                concurrent_users=scenario['users'],
+                requests_per_user=scenario['requests'],
+                test_category='sustained_load',
+                expected_behavior='all_succeed',  # Should handle sustained load
+                validation_checks=['memory_leaks_none', 'performance_degradation_minimal', 'resource_cleanup'],
+                test_duration_seconds=90  # Longer test for sustained load
+            ))
+        
+        return tests
+    
+    def generate_test_file(self, api_spec: Dict[str, Any], output_dir: str) -> str:
+        """
+        Generate a complete concurrency test file
+        
+        Args:
+            api_spec: API specification dictionary
+            output_dir: Directory to save the test file
+            
+        Returns:
+            Path to the generated test file
+        """
+        tests = self.generate_concurrency_tests(api_spec)
+        
+        if not tests:
+            self.logger.warning(f"No concurrency tests generated for {api_spec.get('path')}")
+            return ""
+        
+        # Generate test file content
+        test_content = self._generate_test_file_content(api_spec, tests)
+        
+        # Save to file
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        filename = f"test_{operation_id}_concurrency.py"
+        output_path = Path(output_dir) / filename
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(test_content)
+        
+        self.logger.info(f"Generated concurrency test file: {output_path}")
+        return str(output_path)
+    
+    def _generate_test_file_content(self, api_spec: Dict[str, Any], tests: List[ConcurrencyTest]) -> str:
+        """Generate the actual test file content"""
+        operation_id = api_spec.get('operationId', 'endpoint')
+        method = api_spec.get('method', 'GET')
+        path = api_spec.get('path', '/api/endpoint')
+        description = api_spec.get('description', f'{operation_id} endpoint')
+        
+        content = f'''import pytest
+import httpx
+import asyncio
+import time
+import json
+import statistics
+from typing import Dict, Any, List, Tuple
+from concurrent.futures import ThreadPoolExecutor
+import random
+from dataclasses import dataclass
+
+# Advanced Concurrency Tests for: {description}
+# Method: {method}
+# Path: {path}
+# Generated: Enhanced Concurrency Test Generation
+
+BASE_URL = "https://api.example.com"  # Update with your actual API base URL
+
+@dataclass
+class ConcurrencyResult:
+    """Result of a concurrency test"""
+    user_id: int
+    request_id: int
+    status_code: int
+    response_time: float
+    success: bool
+    error_message: str = ""
+    response_data: Dict[str, Any] = None
+
+class Test{operation_id.title().replace('_', '')}Concurrency:
+    
+    @pytest.fixture
+    def client(self):
+        return httpx.AsyncClient(base_url=BASE_URL, timeout=60.0)
+    
+    @pytest.fixture
+    def auth_headers(self):
+        """Authentication headers for concurrency tests"""
+        return {placeholder}
+    
+    @pytest.fixture
+    def performance_metrics(self):
+        """Track performance metrics across concurrent requests"""
+        class PerformanceMetrics:
+            def __init__(self):
+                self.response_times = []
+                self.status_codes = []
+                self.errors = []
+                self.start_time = None
+                self.end_time = None
+            
+            def start_test(self):
+                self.start_time = time.time()
+            
+            def end_test(self):
+                self.end_time = time.time()
+            
+            def record_result(self, result: ConcurrencyResult):
+                self.response_times.append(result.response_time)
+                self.status_codes.append(result.status_code)
+                if not result.success:
+                    self.errors.append(result.error_message)
+            
+            def get_summary(self):
+                if not self.response_times:
+                    return {placeholder}
+                
+                return {{
+                    "total_requests": len(self.response_times),
+                    "avg_response_time": statistics.mean(self.response_times),
+                    "median_response_time": statistics.median(self.response_times),
+                    "min_response_time": min(self.response_times),
+                    "max_response_time": max(self.response_times),
+                    "success_rate": (len([s for s in self.status_codes if 200 <= s < 300]) / len(self.status_codes)) * 100,
+                    "error_rate": (len(self.errors) / len(self.response_times)) * 100,
+                    "total_duration": self.end_time - self.start_time if self.end_time and self.start_time else 0,
+                    "requests_per_second": len(self.response_times) / (self.end_time - self.start_time) if self.end_time and self.start_time else 0
+                }}
+        
+        return PerformanceMetrics()
+    
+    async def execute_concurrent_request(
+        self, 
+        client: httpx.AsyncClient, 
+        user_id: int, 
+        request_id: int, 
+        payload: Dict[str, Any], 
+        headers: Dict[str, str]
+    ) -> ConcurrencyResult:
+        """Execute a single concurrent request"""
+        
+        # Add unique identifiers to payload
+        test_payload = payload.copy()
+        test_payload["user_id"] = user_id
+        test_payload["request_id"] = request_id
+        
+        start_time = time.time()
+        
+        try:
+            response = await client.{method.lower()}("{path}", json=test_payload, headers=headers)
+            response_time = time.time() - start_time
+            
+            # Parse response data if available
+            response_data = None
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    response_data = response.json()
+                except json.JSONDecodeError:
+                    response_data = {placeholder}
+            
+            return ConcurrencyResult(
+                user_id=user_id,
+                request_id=request_id,
+                status_code=response.status_code,
+                response_time=response_time,
+                success=200 <= response.status_code < 300,
+                response_data=response_data
+            )
+        
+        except asyncio.TimeoutError:
+            return ConcurrencyResult(
+                user_id=user_id,
+                request_id=request_id,
+                status_code=408,
+                response_time=time.time() - start_time,
+                success=False,
+                error_message="Request timeout"
+            )
+        
+        except Exception as e:
+            return ConcurrencyResult(
+                user_id=user_id,
+                request_id=request_id,
+                status_code=0,
+                response_time=time.time() - start_time,
+                success=False,
+                error_message=str(e)[:200]
+            )
+    
+    async def run_concurrent_test(
+        self,
+        client: httpx.AsyncClient,
+        concurrent_users: int,
+        requests_per_user: int,
+        payload: Dict[str, Any],
+        headers: Dict[str, str],
+        performance_metrics
+    ) -> List[ConcurrencyResult]:
+        """Run a concurrent test with multiple users and requests"""
+        
+        performance_metrics.start_test()
+        
+        # Create all tasks for concurrent execution
+        tasks = []
+        for user_id in range(concurrent_users):
+            for request_id in range(requests_per_user):
+                task = self.execute_concurrent_request(client, user_id, request_id, payload, headers)
+                tasks.append(task)
+        
+        # Execute all requests concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        performance_metrics.end_test()
+        
+        # Handle any exceptions and convert to ConcurrencyResult objects
+        final_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                final_results.append(ConcurrencyResult(
+                    user_id=i // requests_per_user,
+                    request_id=i % requests_per_user,
+                    status_code=0,
+                    response_time=0,
+                    success=False,
+                    error_message=str(result)[:200]
+                ))
+            else:
+                final_results.append(result)
+                performance_metrics.record_result(result)
+        
+        return final_results
+    
+    def analyze_race_conditions(self, results: List[ConcurrencyResult], payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze results for potential race conditions"""
+        
+        # Group successful responses by response data
+        successful_results = [r for r in results if r.success and r.response_data]
+        
+        if not successful_results:
+            return {placeholder}
+        
+        # Look for data inconsistencies that might indicate race conditions
+        unique_responses = set()
+        response_counts = {placeholder}
+        
+        for result in successful_results:
+            if result.response_data:
+                # Create a hashable representation of response
+                response_key = json.dumps(result.response_data, sort_keys=True)
+                unique_responses.add(response_key)
+                response_counts[response_key] = response_counts.get(response_key, 0) + 1
+        
+        # Check for shared resource conflicts
+        shared_resource_id = payload.get("shared_resource_id")
+        if shared_resource_id:
+            # All requests to same resource should have consistent final state
+            if len(unique_responses) > 1:
+                return {{
+                    "race_detected": True,
+                    "reason": f"Inconsistent responses for shared resource {placeholder}",
+                    "unique_response_count": len(unique_responses),
+                    "most_common_response": max(response_counts, key=response_counts.get)
+                }}
+        
+        return {{
+            "race_detected": False,
+            "unique_responses": len(unique_responses),
+            "response_distribution": response_counts
+        }}
+    
+    def validate_concurrency_behavior(
+        self, 
+        results: List[ConcurrencyResult], 
+        test_category: str, 
+        expected_behavior: str
+    ) -> Dict[str, Any]:
+        """Validate the behavior of concurrent requests"""
+        
+        total_requests = len(results)
+        successful_requests = len([r for r in results if r.success])
+        failed_requests = total_requests - successful_requests
+        
+        success_rate = (successful_requests / total_requests) * 100 if total_requests > 0 else 0
+        
+        validation_result = {{
+            "total_requests": total_requests,
+            "successful_requests": successful_requests,
+            "failed_requests": failed_requests,
+            "success_rate": success_rate,
+            "validation_passed": True,
+            "issues": []
+        }}
+        
+        # Validate based on expected behavior
+        if expected_behavior == "all_succeed":
+            if success_rate < 95:
+                validation_result["validation_passed"] = False
+                validation_result["issues"].append(f"Success rate too low: {placeholder}% (expected >95%)")
+        
+        elif expected_behavior == "some_fail":
+            if success_rate > 95:
+                validation_result["issues"].append("Expected some failures but success rate is very high")
+            elif success_rate < 50:
+                validation_result["validation_passed"] = False
+                validation_result["issues"].append(f"Success rate too low: {placeholder}% (expected >50%)")
+        
+        elif expected_behavior == "orderly_queue":
+            # Check that requests don't fail due to resource contention
+            timeout_errors = len([r for r in results if "timeout" in r.error_message.lower()])
+            if timeout_errors > total_requests * 0.3:  # More than 30% timeouts
+                validation_result["validation_passed"] = False
+                validation_result["issues"].append(f"Too many timeout errors: {placeholder} ({placeholder}%)")
+        
+        return validation_result
+    
+'''
+        
+        # Generate test methods for each category
+        tests_by_category = {}
+        for test in tests:
+            category = test.test_category
+            if category not in tests_by_category:
+                tests_by_category[category] = []
+            tests_by_category[category].append(test)
+        
+        for category, category_tests in tests_by_category.items():
+            content += f"    # {category.upper().replace('_', ' ')} TESTS\n\n"
+            
+            for test in category_tests[:2]:  # Limit to 2 tests per category
+                content += self._generate_concurrency_test_method(test, api_spec)
+                content += "\n"
+        
+        # Add comprehensive concurrency summary test
+        content += self._generate_concurrency_summary_test(api_spec, tests)
+        
+        return content
+    
+    def _generate_concurrency_test_method(self, test: ConcurrencyTest, api_spec: Dict[str, Any]) -> str:
+        """Generate a single concurrency test method"""
+        payload_str = json.dumps(test.test_payload, indent=8)[:-1] + "    }"
+        
+        method_code = f'''    @pytest.mark.asyncio
+    @pytest.mark.concurrency
+    @pytest.mark.slow
+    async def {test.name}(self, client, auth_headers, performance_metrics):
+        """{test.description}"""
+        
+        print(f"🚀 Starting concurrency test: {test.concurrent_users} users, {test.requests_per_user} requests each")
+        
+        payload = {payload_str}
+        
+        # Run the concurrent test
+        results = await self.run_concurrent_test(
+            client=client,
+            concurrent_users={test.concurrent_users},
+            requests_per_user={test.requests_per_user},
+            payload=payload,
+            headers=auth_headers,
+            performance_metrics=performance_metrics
+        )
+        
+        # Get performance summary
+        perf_summary = performance_metrics.get_summary()
+        
+        print(f"📊 Performance Summary:")
+        print(f"  Total Requests: {placeholder}")
+        print(f"  Success Rate: {placeholder}%")
+        print(f"  Avg Response Time: {placeholder}s")
+        print(f"  Requests/Second: {placeholder}")
+        
+        # Validate concurrency behavior
+        validation = self.validate_concurrency_behavior(results, "{test.test_category}", "{test.expected_behavior}")
+        
+        print(f"✅ Validation: {placeholder}")
+        if validation.get('issues'):
+            for issue in validation['issues']:
+                print(f"⚠️  Issue: {placeholder}")
+        
+        # Perform category-specific analysis
+        if "{test.test_category}" == "race_condition":
+            race_analysis = self.analyze_race_conditions(results, payload)
+            print(f"🏁 Race Condition Analysis: {placeholder}")
+            
+            # Race condition tests should detect races or handle them properly
+            if race_analysis.get("race_detected"):
+                print("⚡ Race condition detected - verify proper handling")
+            else:
+                print("✅ No race conditions detected - good synchronization")
+        
+        # Performance assertions
+        assert perf_summary.get('error_rate', 100) < 50, f"Error rate too high: {placeholder}%"
+        
+        # Response time assertions
+        avg_response_time = perf_summary.get('avg_response_time', 0)
+        if avg_response_time > 10:  # 10 seconds is quite long
+            print(f"⚠️  Slow average response time: {placeholder}s")
+        
+        # Assertions based on test category
+        if "{test.test_category}" in ["load_burst", "sustained_load"]:
+            # Load tests should handle reasonable throughput
+            rps = perf_summary.get('requests_per_second', 0)
+            assert rps > 1, f"Throughput too low: {placeholder} requests/second"
+        
+        elif "{test.test_category}" == "resource_contention":
+            # Resource contention tests should not have excessive timeouts
+            timeout_count = len([r for r in results if "timeout" in r.error_message.lower()])
+            timeout_rate = (timeout_count / len(results)) * 100 if results else 0
+            assert timeout_rate < 40, f"Too many timeouts: {placeholder}%"
+        
+        elif "{test.test_category}" == "deadlock":
+            # Deadlock tests should complete (not hang indefinitely)
+            total_duration = perf_summary.get('total_duration', 0)
+            assert total_duration < {test.test_duration_seconds + 30}, f"Test took too long: {placeholder}s"
+        
+        print(f"✅ Concurrency test '{test.test_category}' completed successfully!")
+'''
+        
+        return method_code
+    
+    def _generate_concurrency_summary_test(self, api_spec: Dict[str, Any], tests: List[ConcurrencyTest]) -> str:
+        """Generate a summary test for concurrency scenarios"""
+        operation_id = api_spec.get('operationId', 'endpoint').lower()
+        method = api_spec.get('method', 'GET')
+        path = api_spec.get('path', '/api/endpoint')
+        
+        return f'''    @pytest.mark.asyncio
+    @pytest.mark.concurrency
+    async def test_{operation_id}_concurrency_resilience_summary(self, client, auth_headers, performance_metrics):
+        """Summary test for concurrency resilience across different scenarios"""
+        
+        # Test different concurrency scenarios efficiently
+        concurrency_scenarios = [
+            # Light concurrent load
+            {{
+                "name": "light_load",
+                "users": 5,
+                "requests_per_user": 8,
+                "payload": {placeholder},
+                "expected_success_rate": 95,
+                "description": "Light concurrent load"
+            }},
+            
+            # Moderate burst
+            {{
+                "name": "moderate_burst", 
+                "users": 20,
+                "requests_per_user": 3,
+                "payload": {placeholder},
+                "expected_success_rate": 80,
+                "description": "Moderate burst load"
+            }},
+            
+            # Race condition simulation
+            {{
+                "name": "race_simulation",
+                "users": 10,
+                "requests_per_user": 5,
+                "payload": {placeholder},
+                "expected_success_rate": 70,
+                "description": "Race condition simulation"
+            }},
+            
+            # Resource contention
+            {{
+                "name": "resource_contention",
+                "users": 15,
+                "requests_per_user": 6,
+                "payload": {placeholder},
+                "expected_success_rate": 75,
+                "description": "Resource contention test"
+            }},
+        ]
+        
+        results_summary = {{
+            "total_scenarios": len(concurrency_scenarios),
+            "passed_scenarios": 0,
+            "failed_scenarios": 0,
+            "overall_metrics": {{
+                "total_requests": 0,
+                "total_successes": 0,
+                "avg_response_time": [],
+                "requests_per_second": []
+            }}
+        }}
+        
+        print(f"\\n🚀 Running concurrency resilience tests...")
+        print(f"{'Scenario':<20} {'Users':<6} {'Req/User':<8} {'Success%':<8} {'Avg RT(ms)':<12} {'RPS':<6} {'Status'}")
+        print("-" * 85)
+        
+        for scenario in concurrency_scenarios:
+            try:
+                # Run concurrent test for this scenario
+                scenario_results = await self.run_concurrent_test(
+                    client=client,
+                    concurrent_users=scenario["users"],
+                    requests_per_user=scenario["requests_per_user"],
+                    payload=scenario["payload"],
+                    headers=auth_headers,
+                    performance_metrics=performance_metrics
+                )
+                
+                # Calculate scenario metrics
+                total_requests = len(scenario_results)
+                successful_requests = len([r for r in scenario_results if r.success])
+                success_rate = (successful_requests / total_requests) * 100 if total_requests > 0 else 0
+                
+                avg_response_time = statistics.mean([r.response_time for r in scenario_results]) if scenario_results else 0
+                test_duration = max([r.response_time for r in scenario_results], default=1)
+                requests_per_second = total_requests / test_duration if test_duration > 0 else 0
+                
+                # Update overall metrics
+                results_summary["overall_metrics"]["total_requests"] += total_requests
+                results_summary["overall_metrics"]["total_successes"] += successful_requests
+                results_summary["overall_metrics"]["avg_response_time"].append(avg_response_time)
+                results_summary["overall_metrics"]["requests_per_second"].append(requests_per_second)
+                
+                # Determine if scenario passed
+                scenario_passed = success_rate >= scenario["expected_success_rate"]
+                status = "PASS" if scenario_passed else "FAIL"
+                
+                if scenario_passed:
+                    results_summary["passed_scenarios"] += 1
+                else:
+                    results_summary["failed_scenarios"] += 1
+                
+                print(f"{scenario['name']:<20} {scenario['users']:<6} {placeholder} {placeholder}% {placeholder}ms {placeholder} {placeholder}")
+                
+            except Exception as e:
+                results_summary["failed_scenarios"] += 1
+                error_msg = str(e)[:30]
+                print(f"{scenario['name']:<20} {scenario['users']:<6} {placeholder} {'ERROR':<8}} {'N/A':<12}} {'N/A':<6}} FAIL")
+                print(f"    Error: {placeholder}")
+        
+        print("-" * 85)
+        
+        # Calculate overall metrics
+        overall_success_rate = (
+            results_summary["overall_metrics"]["total_successes"] / 
+            results_summary["overall_metrics"]["total_requests"] * 100
+        ) if results_summary["overall_metrics"]["total_requests"] > 0 else 0
+        
+        overall_avg_response_time = statistics.mean(results_summary["overall_metrics"]["avg_response_time"]) if results_summary["overall_metrics"]["avg_response_time"] else 0
+        overall_avg_rps = statistics.mean(results_summary["overall_metrics"]["requests_per_second"]) if results_summary["overall_metrics"]["requests_per_second"] else 0
+        
+        print(f"📊 Overall Concurrency Results:")
+        print(f"  Scenarios Passed: {placeholder}/{placeholder}")
+        print(f"  Overall Success Rate: {placeholder}%")
+        print(f"  Average Response Time: {placeholder}ms")
+        print(f"  Average Throughput: {placeholder} requests/second")
+        
+        # Calculate concurrency resilience score
+        scenario_success_rate = results_summary["passed_scenarios"] / results_summary["total_scenarios"] if results_summary["total_scenarios"] > 0 else 0
+        resilience_score = (scenario_success_rate * 0.7) + (overall_success_rate / 100 * 0.3)  # Weighted score
+        
+        print(f"\\n🛡️ Concurrency Resilience Score: {placeholder}")
+        
+        # Assertions for concurrency resilience
+        assert scenario_success_rate >= 0.6, f"Too many scenario failures: {placeholder}/{placeholder}"
+        assert overall_success_rate >= 60, f"Overall success rate too low: {placeholder}%"
+        assert resilience_score >= 0.6, f"Concurrency resilience score too low: {placeholder}"
+        
+        # Performance assertions
+        if overall_avg_response_time > 5:  # More than 5 seconds average
+            print(f"⚠️  High average response time under load: {placeholder}s")
+        
+        if overall_avg_rps < 2:  # Less than 2 requests per second
+            print(f"⚠️  Low throughput under concurrent load: {placeholder} RPS")
+        
+        print("✅ Concurrency resilience test completed successfully!")
+'''
+        
+        return content

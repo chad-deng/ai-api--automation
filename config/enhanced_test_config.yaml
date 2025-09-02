@@ -1,0 +1,163 @@
+# Enhanced Test Generator Configuration
+# Enterprise-grade test generation with quality gates and monitoring
+
+# Environment Configuration
+environment: "development"
+base_url: "https://api.example.com"
+api_version: "v1"
+
+# Output Settings
+output_directory: "./tests/generated"
+file_naming_pattern: "test_{operation_id}_{test_type}.py"
+overwrite_existing: false
+create_subdirectories: true
+
+# Template Settings
+template_directory: "./src/templates"
+enabled_test_types:
+  - "basic"
+  - "crud"
+  - "error_scenarios"
+  - "authentication"
+  - "validation"
+  - "boundary_testing"
+  - "environment_config"
+  - "concurrency"
+
+# Quality Gate Configuration - CRITICAL FOR ENTERPRISE
+quality:
+  min_quality_score: 0.90  # 90% quality threshold
+  max_test_method_length: 50
+  min_assertion_ratio: 0.3
+  require_docstrings: true
+  check_async_patterns: true
+  check_security_patterns: true
+  check_performance_patterns: true
+  check_test_isolation: true
+  forbidden_patterns:
+    - 'time\.sleep\('
+    - 'print\s*\('
+    - 'input\s*\('
+    - 'exit\s*\('
+
+# Performance Testing Configuration
+performance:
+  light_load_users: 5
+  light_load_requests: 10
+  normal_load_users: 10
+  normal_load_requests: 20
+  heavy_load_users: 25
+  heavy_load_requests: 50
+  stress_load_users: 50
+  stress_load_requests: 100
+  max_response_time_ms: 5000
+  success_rate_threshold: 0.95
+  ramp_up_duration: 10
+  endurance_duration: 1800  # 30 minutes
+
+# Validation Testing Configuration
+validation:
+  check_required_fields: true
+  check_field_types: true
+  check_string_constraints: true
+  check_numeric_constraints: true
+  check_format_validation: true
+  check_pattern_validation: true
+  check_enum_validation: true
+  check_array_validation: true
+  check_object_validation: true
+  check_additional_properties: true
+  generate_boundary_tests: true
+  generate_security_tests: true
+
+# Boundary Testing Configuration
+boundary_testing:
+  test_extreme_values: true
+  test_unicode_edge_cases: true
+  test_payload_size_limits: true
+  test_numeric_precision: true
+  test_time_boundaries: true
+  test_concurrent_boundaries: true
+  max_payload_size_mb: 10
+  unicode_test_strings:
+    - "🚀🎯📈💾🔥⚡🎉🛠️🌟🎪"  # Emojis
+    - "测试中文字符串"           # Chinese
+    - "тест русский текст"      # Cyrillic  
+    - "اختبار النص العربي"       # Arabic
+    - "בדיקת טקסט בעברית"        # Hebrew
+    - "テストの日本語テキスト"      # Japanese
+  boundary_multipliers: [0.5, 0.9, 1.0, 1.1, 2.0, 10.0]
+
+# Environment Configuration Testing
+environment_config:
+  test_environment_variables: true
+  test_config_overrides: true
+  test_database_connectivity: true
+  test_external_dependencies: true
+  test_ssl_configurations: true
+  environments_to_test: ["development", "staging", "production"]
+  required_env_vars: ["API_KEY", "DATABASE_URL", "JWT_SECRET"]
+  config_files_to_test: ["config.yaml", "config.json", ".env"]
+
+# Concurrency Testing Configuration
+concurrency:
+  test_race_conditions: true
+  test_concurrent_modifications: true
+  test_resource_locking: true
+  test_deadlock_scenarios: true
+  concurrent_users: 10
+  concurrent_requests_per_user: 5
+  race_condition_iterations: 50
+  timeout_seconds: 30
+
+# Authentication Settings
+auth_token_placeholder: "Bearer test_token_here"
+api_key_placeholder: "test_api_key_here"
+basic_auth_placeholder: "test_username:test_password"
+
+# Test Data Generation Settings
+generate_realistic_data: true
+use_faker_for_data: true
+test_data_seed: 42  # For reproducible test data
+
+# Advanced Settings
+parallel_generation: true
+max_worker_threads: 4
+enable_caching: true
+cache_duration_hours: 24
+
+# Template Configurations
+template_configs:
+  basic:
+    enabled: true
+    custom_variables:
+      timeout: 30
+      retry_count: 3
+  
+  error_scenarios:
+    enabled: true
+    custom_variables:
+      test_invalid_auth: true
+      test_malformed_requests: true
+      test_rate_limiting: true
+  
+  performance:
+    enabled: true
+    custom_variables:
+      load_test_duration: 60
+      concurrent_users: 10
+  
+  validation:
+    enabled: true
+    custom_variables:
+      strict_validation: true
+      test_edge_cases: true
+
+# Monitoring and Alerting
+monitoring:
+  enable_metrics_collection: true
+  metrics_export_interval: 60  # seconds
+  alert_on_quality_gate_failures: true
+  alert_on_fallback_usage: true
+  max_fallback_rate: 0.1  # 10% max fallback usage
+  health_check_interval: 30  # seconds

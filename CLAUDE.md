@@ -222,3 +222,167 @@ We only use the following Gemini Models:
 - gemini-2.5-pro
 
 Older models such as gemini-1.5-flash don't exist anymore.
+
+# PROJECT STANDARDS & CONVENTIONS
+
+## 1. Project Structure and File Naming
+
+### Standardized Project Structure
+Follow this mandatory directory structure:
+```
+src/            # Source code
+tests/          # Test files  
+docs/           # Documentation
+scripts/        # Build and utility scripts
+config/         # Configuration files
+```
+
+### File and Folder Naming Standards
+- **Use lowercase with underscores**: `user_profile.py` not `UserProfile.py` or `user profile.py`
+- **Be descriptive and meaningful**: `authentication_handler.py` not `auth.py`
+- **Avoid spaces and special characters**: Use `_` or `-` as separators
+- **Test files must match source files**: `test_user_profile.py` for `user_profile.py`
+
+## 2. Code Standards and Quality
+
+### Language-Specific Standards
+- **Python**: Strict adherence to PEP 8
+- **JavaScript/TypeScript**: Follow ESLint rules and Airbnb style guide
+- **Go**: Use `go fmt` and follow effective Go principles
+
+### Mandatory Code Formatting
+- **Python**: Use `black` formatter before every commit
+- **JavaScript/TypeScript**: Use `prettier` with consistent configuration
+- **Go**: Use `go fmt` and `gofmt`
+- **ALL**: Configure your IDE to format on save
+
+### Documentation Requirements
+- **Functions/Methods**: Must have docstrings/comments explaining:
+  - Purpose and behavior
+  - Parameters and types
+  - Return values
+  - Exceptions/errors raised
+- **Classes**: Must document purpose and usage
+- **Complex Logic**: Inline comments for non-obvious code sections
+- **APIs**: Complete OpenAPI/Swagger documentation required
+
+## 3. Version Control and Commits
+
+### Commit Message Standards (MANDATORY)
+Use **Conventional Commits** format:
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
+
+**Examples:**
+- `feat(auth): add user authentication feature`
+- `fix(api): correct validation error in user registration`
+- `docs(readme): update installation instructions`
+
+### Branch Strategy
+- **Main branch**: `main` (production-ready code only)
+- **Feature branches**: `feature/descriptive-name`
+- **Bug fixes**: `fix/issue-description`
+- **Releases**: `release/version-number`
+- **Hotfixes**: `hotfix/critical-issue`
+
+## 4. Code Review Requirements (NON-NEGOTIABLE)
+
+### Mandatory Review Process
+- **ALL code changes** must be reviewed before merging to main
+- **Minimum 1 reviewer** required, 2 for critical changes
+- **No self-merging** allowed under any circumstances
+- **All CI checks must pass** before review approval
+
+### Code Review Checklist
+Reviewers must verify:
+- [ ] Code follows established style guidelines
+- [ ] Functionality works as expected
+- [ ] No code duplication or redundancy  
+- [ ] Performance considerations addressed
+- [ ] Security vulnerabilities identified and fixed
+- [ ] Unit tests cover new/changed functionality
+- [ ] Documentation updated if needed
+- [ ] No hardcoded secrets or credentials
+
+### Review Standards
+- **Be constructive**: Suggest improvements, don't just criticize
+- **Explain reasoning**: Why is a change needed?
+- **Focus on code, not coder**: Professional, respectful feedback
+- **Block merge if standards not met**: Don't compromise on quality
+
+## 5. Automation and Quality Gates
+
+### Continuous Integration Requirements
+All projects must have:
+- **Automated linting**: ESLint, Pylint, golangci-lint, etc.
+- **Static code analysis**: SonarQube or equivalent
+- **Security scanning**: SAST tools for vulnerability detection
+- **Dependency checking**: Automated vulnerability scanning
+- **Build verification**: Ensure code compiles/runs successfully
+
+### Testing Standards
+- **Unit test coverage**: Minimum 80% for new code
+- **Integration tests**: For API endpoints and critical paths
+- **End-to-end tests**: For complete user workflows
+- **Test naming**: Descriptive names explaining what is tested
+- **Test structure**: Arrange-Act-Assert pattern
+- **Mock external dependencies**: No tests should depend on external services
+
+### Quality Gates (BLOCKING)
+Before any merge to main:
+- [ ] All linting rules pass (zero warnings)
+- [ ] All unit tests pass
+- [ ] Code coverage meets minimum threshold
+- [ ] Static analysis shows no critical issues
+- [ ] Security scans show no high/critical vulnerabilities
+- [ ] Performance tests pass (if applicable)
+- [ ] Documentation is updated
+
+### Pre-commit Hooks (MANDATORY)
+Configure these hooks in all repositories:
+- Format code (black, prettier, go fmt)
+- Run linting checks
+- Run unit tests
+- Check commit message format
+- Prevent commits with secrets/keys
+- Validate file naming conventions
+
+## 6. Error Handling and Logging
+
+### Error Handling Standards
+- **Always handle errors explicitly**: No silent failures
+- **Provide context**: Wrap errors with meaningful messages
+- **Use appropriate error types**: Custom exceptions for different scenarios
+- **Log errors appropriately**: Error level for genuine errors, warn for recoverable issues
+- **Don't expose internal details**: Sanitize error messages for end users
+
+### Logging Requirements
+- **Structured logging**: Use JSON format for production
+- **Appropriate log levels**: DEBUG, INFO, WARN, ERROR, FATAL
+- **Include context**: Request IDs, user IDs, timestamps
+- **No sensitive data**: Never log passwords, tokens, or PII
+- **Performance monitoring**: Log execution times for critical operations
+
+## ENFORCEMENT
+
+These standards are **NON-NEGOTIABLE**. The automated checks will:
+- Block commits that don't meet standards
+- Prevent merges that fail quality gates  
+- Generate reports on compliance metrics
+- Alert when standards are violated
+
+**Remember**: Quality is everyone's responsibility. When in doubt, choose the higher standard.

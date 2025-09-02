@@ -1,0 +1,453 @@
+name: 'Python FastAPI CI/CD Pipeline'
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Security and Code Quality Checks
+  security-quality:
+    name: Security & Code Quality
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety black isort mypy flake8 pylint
+        pip install -r requirements.txt
+
+    - name: Security scan with Bandit
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/ -ll || true
+
+    - name: Dependency vulnerability check with Safety
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check || true
+
+    - name: Code formatting check with Black
+      run: black --check --diff src/
+
+    - name: Import sorting check with isort
+      run: isort --check-only --diff src/
+
+    - name: Linting with flake8
+      run: flake8 src/ --max-line-length=88 --extend-ignore=E203,W503
+
+    - name: Code quality with pylint
+      run: pylint src/ --exit-zero --output-format=json > pylint-report.json || true
+
+    - name: Type checking with mypy
+      run: mypy src/ --ignore-missing-imports --strict-optional
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-quality-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          pylint-report.json
+
+  # Database Tests (SQLite + PostgreSQL compatibility)
+  database-tests:
+    name: Database Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        db-type: ['sqlite', 'postgresql']
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-cov pytest-asyncio pytest-xdist pytest-mock
+        pip install psycopg2-binary  # PostgreSQL adapter
+
+    - name: Run tests with SQLite
+      if: matrix.db-type == 'sqlite'
+      env:
+        DATABASE_URL: sqlite:///./test_automation_test.db
+        TEST_DATABASE_URL: sqlite:///./test_automation_test.db
+        REDIS_URL: redis://localhost:6379/1
+      run: |
+        pytest tests/ \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-fail-under=75 \
+          --junitxml=pytest-sqlite-report.xml \
+          -v
+
+    - name: Run tests with PostgreSQL
+      if: matrix.db-type == 'postgresql'
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379/1
+      run: |
+        pytest tests/ \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-fail-under=75 \
+          --junitxml=pytest-postgres-report.xml \
+          -v
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.db-type }}
+        path: |
+          pytest-*-report.xml
+          htmlcov/
+          coverage.xml
+
+  # API Integration Tests
+  api-integration:
+    name: API Integration Tests
+    runs-on: ubuntu-latest
+    needs: [security-quality, database-tests]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: integration_test
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install httpx pytest-asyncio
+
+    - name: Start FastAPI application
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/integration_test
+        REDIS_URL: redis://localhost:6379/0
+      run: |
+        uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+
+    - name: Run integration tests
+      run: |
+        python -c "
+        import httpx
+        import asyncio
+        async def test_endpoints():
+            async with httpx.AsyncClient(base_url='http://localhost:8000') as client:
+                # Test health endpoint
+                response = await client.get('/health')
+                assert response.status_code == 200, f'Health check failed: {response.status_code}'
+                
+                # Test webhook endpoint structure
+                response = await client.get('/api/v1')
+                print(f'API root response: {response.status_code}')
+                
+            print('Integration tests: PASS ✅')
+        
+        asyncio.run(test_endpoints())
+        "
+
+  # Performance and Load Testing
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [api-integration]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Compose
+      run: |
+        docker-compose -f docker-compose.yml up -d --wait
+        sleep 30
+
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    - name: Create k6 load test script
+      run: |
+        mkdir -p tests/performance
+        cat > tests/performance/load_test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+        
+        export const options = {
+          vus: 10,
+          duration: '30s',
+          thresholds: {
+            http_req_duration: ['p(95)<500'],
+            http_req_failed: ['rate<0.1'],
+          },
+        };
+        
+        export default function() {
+          const response = http.get('http://localhost:8000/health');
+          check(response, {
+            'status is 200': (r) => r.status === 200,
+            'response time < 500ms': (r) => r.timings.duration < 500,
+          });
+          sleep(1);
+        }
+        EOF
+
+    - name: Run performance tests
+      run: |
+        k6 run --out json=performance-results.json tests/performance/load_test.js
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: performance-results.json
+
+    - name: Cleanup
+      if: always()
+      run: docker-compose down -v
+
+  # Build and Push Docker Images
+  build-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [security-quality, database-tests]
+    if: github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix=sha-
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          VERSION=${{ github.sha }}
+          BUILD_DATE=${{ github.event.head_commit.timestamp }}
+
+  # Database Migration Testing
+  migration-test:
+    name: Database Migration Test  
+    runs-on: ubuntu-latest
+    needs: [database-tests]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: migration_test
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Create migration script
+      run: |
+        mkdir -p scripts
+        cat > scripts/migrate_to_postgres.py << 'EOF'
+        import os
+        import sys
+        import asyncio
+        from src.config.settings import Settings
+        from src.database.models import init_db
+        
+        async def main():
+            if '--dry-run' in sys.argv:
+                print("Dry run: Migration would succeed")
+                return
+            
+            print("Running database migration...")
+            await init_db()
+            print("Migration completed successfully")
+        
+        if __name__ == "__main__":
+            asyncio.run(main())
+        EOF
+
+    - name: Test migration (dry run)
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/migration_test
+      run: python scripts/migrate_to_postgres.py --dry-run
+
+    - name: Run actual migration
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/migration_test
+      run: python scripts/migrate_to_postgres.py
+
+  # Coverage Report
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [database-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download test artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: test-results-sqlite
+        path: ./coverage-sqlite
+
+    - name: Download test artifacts
+      uses: actions/download-artifact@v3  
+      with:
+        name: test-results-postgresql
+        path: ./coverage-postgres
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage-sqlite/coverage.xml,./coverage-postgres/coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false

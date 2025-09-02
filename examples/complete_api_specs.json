@@ -1,0 +1,622 @@
+{
+  "GET /api/v3/campaign/sms-attributes/campaignInfoId=:{campaignInfoId}": {
+    "method": "GET",
+    "path": "/api/v3/campaign/sms-attributes/campaignInfoId=:{campaignInfoId}",
+    "files": [
+      "test_get_sms_content_attributes_get_authentication.py",
+      "test_get_sms_content_attributes_validation.py",
+      "test_get_sms_content_attributes_error_scenarios.py",
+      "test_get_sms_content_attributes_concurrency.py"
+    ]
+  },
+  "POST /api/v3/report/engage/sms-log": {
+    "method": "POST",
+    "path": "/api/v3/report/engage/sms-log",
+    "files": [
+      "test_sms_credit_log_post_authentication.py",
+      "test_sms_credit_log_concurrency.py",
+      "test_sms_credit_log_post_crud.py",
+      "test_sms_credit_log_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/campaign/campaign-info/id={id}/campaign-jobs": {
+    "method": "POST",
+    "path": "/api/v3/campaign/campaign-info/id={id}/campaign-jobs",
+    "files": [
+      "test_get_campaign_log_information_post_authentication.py",
+      "test_get_campaign_log_information_error_scenarios.py",
+      "test_get_campaign_log_information_post_crud.py",
+      "test_get_campaign_log_information_concurrency.py"
+    ]
+  },
+  "POST /api/membership/membersRewards": {
+    "method": "POST",
+    "path": "/api/membership/membersRewards",
+    "files": [
+      "test_member_rewards_post_authentication.py",
+      "test_member_rewards_concurrency.py",
+      "test_member_rewards_error_scenarios.py",
+      "test_member_rewards_post_crud.py"
+    ]
+  },
+  "POST /api/membership/membersRegistrationMethod": {
+    "method": "POST",
+    "path": "/api/membership/membersRegistrationMethod",
+    "files": [
+      "test_members_registration_method_error_scenarios.py",
+      "test_members_registration_method_post_crud.py",
+      "test_members_registration_method_post_authentication.py"
+    ]
+  },
+  "POST /api/v3/subscription-order/charge/chargeBee": {
+    "method": "POST",
+    "path": "/api/v3/subscription-order/charge/chargeBee",
+    "files": [
+      "test_charge_the_credit_oncetime_by_chargebee_concurrency.py",
+      "test_charge_the_credit_oncetime_by_chargebee_error_scenarios.py",
+      "test_charge_the_credit_oncetime_by_chargebee_post_authentication.py",
+      "test_charge_the_credit_oncetime_by_chargebee_post_crud.py"
+    ]
+  },
+  "POST /api/v3/payment/complete": {
+    "method": "POST",
+    "path": "/api/v3/payment/complete",
+    "files": [
+      "test_webhook_for_payment_completion_and_page_redirection_post_authentication.py",
+      "test_webhook_for_payment_completion_and_page_redirection_post_crud.py",
+      "test_webhook_for_payment_completion_and_page_redirection_error_scenarios.py",
+      "test_webhook_for_payment_completion_and_page_redirection_concurrency.py"
+    ]
+  },
+  "GET /api/v3/business/sms-credits": {
+    "method": "GET",
+    "path": "/api/v3/business/sms-credits",
+    "files": [
+      "test_get_merchant_s_credits_error_scenarios.py",
+      "test_get_merchant_s_credits_validation.py",
+      "test_get_merchant_s_credits_concurrency.py",
+      "test_get_merchant_s_credits_get_authentication.py"
+    ]
+  },
+  "POST /api/transformations/transactionRecordsItems": {
+    "method": "POST",
+    "path": "/api/transformations/transactionRecordsItems",
+    "files": [
+      "test_tax_report_concurrency.py",
+      "test_tax_report_error_scenarios.py",
+      "test_tax_report_post_authentication.py",
+      "test_tax_report_post_crud.py"
+    ]
+  },
+  "POST /api/v3/business/kds/toggle": {
+    "method": "POST",
+    "path": "/api/v3/business/kds/toggle",
+    "files": [
+      "test_toggle_store_kds_status_post_crud.py",
+      "test_toggle_store_kds_status_error_scenarios.py",
+      "test_toggle_store_kds_status_post_authentication.py",
+      "test_toggle_store_kds_status_concurrency.py"
+    ]
+  },
+  "POST /api/v3/payment/webhook": {
+    "method": "POST",
+    "path": "/api/v3/payment/webhook",
+    "files": [
+      "test_webhook_for_payment_completion_concurrency.py",
+      "test_webhook_for_payment_completion_post_authentication.py",
+      "test_webhook_for_payment_completion_error_scenarios.py",
+      "test_webhook_for_payment_completion_post_crud.py"
+    ]
+  },
+  "POST /api/membership/membersRewardsRedeemed": {
+    "method": "POST",
+    "path": "/api/membership/membersRewardsRedeemed",
+    "files": [
+      "test_member_rewards_redeemed_error_scenarios.py",
+      "test_member_rewards_redeemed_post_authentication.py",
+      "test_member_rewards_redeemed_concurrency.py",
+      "test_member_rewards_redeemed_post_crud.py"
+    ]
+  },
+  "GET /api/v3/e-invoice/verify-tin": {
+    "method": "GET",
+    "path": "/api/v3/e-invoice/verify-tin",
+    "files": [
+      "test_verify_tin_concurrency.py",
+      "test_verify_tin_get_authentication.py",
+      "test_verify_tin_error_scenarios.py",
+      "test_verify_tin_validation.py"
+    ]
+  },
+  "POST /api/v3/campaign/enable": {
+    "method": "POST",
+    "path": "/api/v3/campaign/enable",
+    "files": [
+      "test_enable_the_feature_of_campaign_concurrency.py",
+      "test_enable_the_feature_of_campaign_error_scenarios.py",
+      "test_enable_the_feature_of_campaign_post_crud.py",
+      "test_enable_the_feature_of_campaign_validation.py",
+      "test_enable_the_feature_of_campaign_post_authentication.py"
+    ]
+  },
+  "GET /api/v3/loyalty/cashback-settings": {
+    "method": "GET",
+    "path": "/api/v3/loyalty/cashback-settings",
+    "files": [
+      "test_get_cashback_settings_validation.py",
+      "test_get_cashback_settings_get_authentication.py",
+      "test_get_cashback_settings_concurrency.py",
+      "test_get_cashback_settings_error_scenarios.py"
+    ]
+  },
+  "POST /api/membership/membersRegistrationLocation": {
+    "method": "POST",
+    "path": "/api/membership/membersRegistrationLocation",
+    "files": [
+      "test_members_registration_location_error_scenarios.py",
+      "test_members_registration_location_post_crud.py",
+      "test_members_registration_location_post_authentication.py",
+      "test_members_registration_location_concurrency.py"
+    ]
+  },
+  "POST /api/v3/subscription-order": {
+    "method": "POST",
+    "path": "/api/v3/subscription-order",
+    "files": [
+      "test_create_subscription_order_subscription_and_invoice_error_scenarios.py",
+      "test_create_subscription_order_subscription_and_invoice_post_crud.py",
+      "test_create_subscription_order_subscription_and_invoice_post_authentication.py",
+      "test_create_subscription_order_subscription_and_invoice_concurrency.py"
+    ]
+  },
+  "POST /api/v3/subscription/renew/preview": {
+    "method": "POST",
+    "path": "/api/v3/subscription/renew/preview",
+    "files": [
+      "test_preview_renew_subscription_concurrency.py",
+      "test_preview_renew_subscription_post_crud.py",
+      "test_preview_renew_subscription_post_authentication.py",
+      "test_preview_renew_subscription_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/subscription/reactivate": {
+    "method": "POST",
+    "path": "/api/v3/subscription/reactivate",
+    "files": [
+      "test_reactivate_subscription_concurrency.py",
+      "test_reactivate_subscription_post_crud.py",
+      "test_reactivate_subscription_error_scenarios.py",
+      "test_reactivate_subscription_validation.py",
+      "test_reactivate_subscription_post_authentication.py"
+    ]
+  },
+  "POST /api/v3/subscription-order/inquiry": {
+    "method": "POST",
+    "path": "/api/v3/subscription-order/inquiry",
+    "files": [
+      "test_check_last_subscription_order_status_error_scenarios.py",
+      "test_check_last_subscription_order_status_post_crud.py",
+      "test_check_last_subscription_order_status_concurrency.py",
+      "test_check_last_subscription_order_status_post_authentication.py"
+    ]
+  },
+  "GET /api/v3/payment/online-options": {
+    "method": "GET",
+    "path": "/api/v3/payment/online-options",
+    "files": [
+      "test_get_the_list_of_payment_options_validation.py",
+      "test_get_the_list_of_payment_options_get_authentication.py",
+      "test_get_the_list_of_payment_options_concurrency.py",
+      "test_get_the_list_of_payment_options_error_scenarios.py"
+    ]
+  },
+  "DELETE /api/v3/report/saved-filters/{id}": {
+    "method": "DELETE",
+    "path": "/api/v3/report/saved-filters/{id}",
+    "files": [
+      "test_delete_saved_filter_concurrency.py",
+      "test_delete_saved_filter_delete_crud.py",
+      "test_delete_saved_filter_delete_authentication.py",
+      "test_delete_saved_filter_error_scenarios.py",
+      "test_delete_saved_filter_validation.py"
+    ]
+  },
+  "GET /api/v3/campaign/campaign-info/id={id}": {
+    "method": "GET",
+    "path": "/api/v3/campaign/campaign-info/id={id}",
+    "files": [
+      "test_get_single_campain_info_by_campaign_info_id_get_authentication.py",
+      "test_get_single_campain_info_by_campaign_info_id_concurrency.py",
+      "test_get_single_campain_info_by_campaign_info_id_validation.py",
+      "test_get_single_campain_info_by_campaign_info_id_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/subscription/reactivate/preview": {
+    "method": "POST",
+    "path": "/api/v3/subscription/reactivate/preview",
+    "files": [
+      "test_preview_reactivate_subscription_post_crud.py",
+      "test_preview_reactivate_subscription_validation.py",
+      "test_preview_reactivate_subscription_post_authentication.py",
+      "test_preview_reactivate_subscription_concurrency.py",
+      "test_preview_reactivate_subscription_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/report/engages/campaignLogs": {
+    "method": "POST",
+    "path": "/api/v3/report/engages/campaignLogs",
+    "files": [
+      "test_campaign_revenue_log_error_scenarios.py",
+      "test_campaign_revenue_log_post_crud.py",
+      "test_campaign_revenue_log_concurrency.py",
+      "test_campaign_revenue_log_post_authentication.py"
+    ]
+  },
+  "GET /api/v3/campaign/{id}/estimation": {
+    "method": "GET",
+    "path": "/api/v3/campaign/{id}/estimation",
+    "files": [
+      "test_get_campaign_estimation_validation.py",
+      "test_get_campaign_estimation_get_authentication.py",
+      "test_get_campaign_estimation_concurrency.py",
+      "test_get_campaign_estimation_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/subscription-order/cancel-last": {
+    "method": "POST",
+    "path": "/api/v3/subscription-order/cancel-last",
+    "files": [
+      "test_cancel_last_subscription_order_or_invoice_order_post_crud.py",
+      "test_cancel_last_subscription_order_or_invoice_order_concurrency.py",
+      "test_cancel_last_subscription_order_or_invoice_order_error_scenarios.py",
+      "test_cancel_last_subscription_order_or_invoice_order_post_authentication.py"
+    ]
+  },
+  "POST /api/v3/subscription/activate": {
+    "method": "POST",
+    "path": "/api/v3/subscription/activate",
+    "files": [
+      "test_activate_subscription_error_scenarios.py",
+      "test_activate_subscription_post_authentication.py",
+      "test_activate_subscription_concurrency.py",
+      "test_activate_subscription_post_crud.py"
+    ]
+  },
+  "POST /api/v3/subscription/renew": {
+    "method": "POST",
+    "path": "/api/v3/subscription/renew",
+    "files": [
+      "test_renew_subscription_error_scenarios.py",
+      "test_renew_subscription_post_authentication.py",
+      "test_renew_subscription_post_crud.py",
+      "test_renew_subscription_concurrency.py"
+    ]
+  },
+  "POST /api/v3/online-store/reviews": {
+    "method": "POST",
+    "path": "/api/v3/online-store/reviews",
+    "files": [
+      "test_get_campaign_s_feedback_information_post_crud.py",
+      "test_get_campaign_s_feedback_information_post_authentication.py",
+      "test_get_campaign_s_feedback_information_error_scenarios.py",
+      "test_get_campaign_s_feedback_information_concurrency.py"
+    ]
+  },
+  "POST /api/v3/report/engages/feedbacks/campaign": {
+    "method": "POST",
+    "path": "/api/v3/report/engages/feedbacks/campaign",
+    "files": [
+      "test_get_campaign_stats_information_error_scenarios.py",
+      "test_get_campaign_stats_information_post_crud.py",
+      "test_get_campaign_stats_information_concurrency.py",
+      "test_get_campaign_stats_information_post_authentication.py"
+    ]
+  },
+  "POST /api/v3/campaign": {
+    "method": "POST",
+    "path": "/api/v3/campaign",
+    "files": [
+      "test_save_campaign_error_scenarios.py",
+      "test_save_campaign_concurrency.py",
+      "test_save_campaign_post_authentication.py",
+      "test_save_campaign_post_crud.py"
+    ]
+  },
+  "POST /api/transformations/transactionRecords": {
+    "method": "POST",
+    "path": "/api/transformations/transactionRecords",
+    "files": [
+      "test_report_api_sales_per_store_with_channels_post_authentication.py",
+      "test_report_api_sales_per_store_with_channels_post_crud.py",
+      "test_report_api_sales_per_store_with_channels_concurrency.py",
+      "test_report_api_sales_per_store_with_channels_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/report/saved-filters": {
+    "method": "POST",
+    "path": "/api/v3/report/saved-filters",
+    "files": [
+      "test_create_saved_filter_post_crud.py",
+      "test_create_saved_filter_post_authentication.py",
+      "test_create_saved_filter_concurrency.py",
+      "test_create_saved_filter_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/subscription/payment-info": {
+    "method": "POST",
+    "path": "/api/v3/subscription/payment-info",
+    "files": [
+      "test_save_the_cardinfo_for_the_merchant_post_authentication.py",
+      "test_save_the_cardinfo_for_the_merchant_error_scenarios.py",
+      "test_save_the_cardinfo_for_the_merchant_concurrency.py",
+      "test_save_the_cardinfo_for_the_merchant_post_crud.py"
+    ]
+  },
+  "POST /api/v3/loyalty/cashback-settings": {
+    "method": "POST",
+    "path": "/api/v3/loyalty/cashback-settings",
+    "files": [
+      "test_set_cashback_settings_post_authentication.py",
+      "test_set_cashback_settings_concurrency.py",
+      "test_set_cashback_settings_post_crud.py",
+      "test_set_cashback_settings_error_scenarios.py"
+    ]
+  },
+  "GET /api/v3/campaign/id=:{id}": {
+    "method": "GET",
+    "path": "/api/v3/campaign/id=:{id}",
+    "files": [
+      "test_get_single_campain_data_by_campaignid_validation.py",
+      "test_get_single_campain_data_by_campaignid_concurrency.py",
+      "test_get_single_campain_data_by_campaignid_error_scenarios.py",
+      "test_get_single_campain_data_by_campaignid_get_authentication.py"
+    ]
+  },
+  "POST /api/v3/business/kds/licenses": {
+    "method": "POST",
+    "path": "/api/v3/business/kds/licenses",
+    "files": [
+      "test_get_kds_and_ncs_licenses_post_authentication.py",
+      "test_get_kds_and_ncs_licenses_error_scenarios.py",
+      "test_get_kds_and_ncs_licenses_post_crud.py",
+      "test_get_kds_and_ncs_licenses_concurrency.py"
+    ]
+  },
+  "POST /api/v3/subscription/schedule-activation": {
+    "method": "POST",
+    "path": "/api/v3/subscription/schedule-activation",
+    "files": [
+      "test_schedule_an_activation_post_crud.py",
+      "test_schedule_an_activation_validation.py",
+      "test_schedule_an_activation_error_scenarios.py",
+      "test_schedule_an_activation_concurrency.py",
+      "test_schedule_an_activation_post_authentication.py"
+    ]
+  },
+  "GET /api/v3/business/opportunities/{id}": {
+    "method": "GET",
+    "path": "/api/v3/business/opportunities/{id}",
+    "files": [
+      "test_get_opportunity_info_concurrency.py",
+      "test_get_opportunity_info_get_authentication.py",
+      "test_get_opportunity_info_error_scenarios.py"
+    ]
+  },
+  "POST /api/membership/membersTopN": {
+    "method": "POST",
+    "path": "/api/membership/membersTopN",
+    "files": [
+      "test_members_top_n_concurrency.py",
+      "test_members_top_n_post_authentication.py",
+      "test_members_top_n_post_crud.py",
+      "test_members_top_n_error_scenarios.py"
+    ]
+  },
+  "GET /api/v3/e-invoices/merchant-records": {
+    "method": "GET",
+    "path": "/api/v3/e-invoices/merchant-records",
+    "files": [
+      "test_get_e_invoice_list_get_authentication.py",
+      "test_get_e_invoice_list_validation.py",
+      "test_get_e_invoice_list_concurrency.py",
+      "test_get_e_invoice_list_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/subscription/cancel-auto-renewal": {
+    "method": "POST",
+    "path": "/api/v3/subscription/cancel-auto-renewal",
+    "files": [
+      "test_cancel_auto_renewal_error_scenarios.py",
+      "test_cancel_auto_renewal_concurrency.py",
+      "test_cancel_auto_renewal_post_crud.py",
+      "test_cancel_auto_renewal_post_authentication.py"
+    ]
+  },
+  "GET /api/v3/merchant/billing/sms/discountInfos": {
+    "method": "GET",
+    "path": "/api/v3/merchant/billing/sms/discountInfos",
+    "files": [
+      "test_get_smscredit_charging_discount_validation.py",
+      "test_get_smscredit_charging_discount_get_authentication.py",
+      "test_get_smscredit_charging_discount_error_scenarios.py",
+      "test_get_smscredit_charging_discount_concurrency.py"
+    ]
+  },
+  "POST /api/v3/subscription/update/preview": {
+    "method": "POST",
+    "path": "/api/v3/subscription/update/preview",
+    "files": [
+      "test_update_subscription_preview_post_crud.py",
+      "test_update_subscription_preview_error_scenarios.py",
+      "test_update_subscription_preview_concurrency.py",
+      "test_update_subscription_preview_post_authentication.py"
+    ]
+  },
+  "POST /api/membership/membersTransactions": {
+    "method": "POST",
+    "path": "/api/membership/membersTransactions",
+    "files": [
+      "test_members_transaction_error_scenarios.py",
+      "test_members_transaction_post_crud.py",
+      "test_members_transaction_post_authentication.py",
+      "test_members_transaction_concurrency.py"
+    ]
+  },
+  "GET /api/v3/subscription": {
+    "method": "GET",
+    "path": "/api/v3/subscription",
+    "files": [
+      "test_get_the_subscription_information_concurrency.py",
+      "test_get_the_subscription_information_error_scenarios.py",
+      "test_get_the_subscription_information_get_authentication.py",
+      "test_get_the_subscription_information_validation.py"
+    ]
+  },
+  "POST /api/membership/members": {
+    "method": "POST",
+    "path": "/api/membership/members",
+    "files": [
+      "test_members_error_scenarios.py",
+      "test_members_post_crud.py",
+      "test_members_concurrency.py",
+      "test_members_post_authentication.py"
+    ]
+  },
+  "POST /api/v3/business/ncs/toggle": {
+    "method": "POST",
+    "path": "/api/v3/business/ncs/toggle",
+    "files": [
+      "test_toggle_store_ncs_status_concurrency.py",
+      "test_toggle_store_ncs_status_post_crud.py",
+      "test_toggle_store_ncs_status_error_scenarios.py",
+      "test_toggle_store_ncs_status_post_authentication.py"
+    ]
+  },
+  "PUT /api/v3/report/saved-filters/{id}": {
+    "method": "PUT",
+    "path": "/api/v3/report/saved-filters/{id}",
+    "files": [
+      "test_update_saved_filter_error_scenarios.py",
+      "test_update_saved_filter_put_authentication.py",
+      "test_update_saved_filter_put_crud.py",
+      "test_update_saved_filter_concurrency.py"
+    ]
+  },
+  "POST /api/v3/subscription/update": {
+    "method": "POST",
+    "path": "/api/v3/subscription/update",
+    "files": [
+      "test_update_subscription_post_authentication.py",
+      "test_update_subscription_error_scenarios.py",
+      "test_update_subscription_concurrency.py",
+      "test_update_subscription_post_crud.py"
+    ]
+  },
+  "POST /api/v3/subscription-order/outdate": {
+    "method": "POST",
+    "path": "/api/v3/subscription-order/outdate",
+    "files": [
+      "test_outdate_subscription_order_post_authentication.py",
+      "test_outdate_subscription_order_concurrency.py",
+      "test_outdate_subscription_order_post_crud.py",
+      "test_outdate_subscription_order_error_scenarios.py"
+    ]
+  },
+  "POST /": {
+    "method": "POST",
+    "path": "/",
+    "files": [
+      "test_markprinted_post_authentication.py",
+      "test_markprinted_post_crud.py",
+      "test_markprinted_concurrency.py",
+      "test_markprinted_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/subscription/sms/update": {
+    "method": "POST",
+    "path": "/api/v3/subscription/sms/update",
+    "files": [
+      "test_update_the_sms_settting_in_billing_post_authentication.py",
+      "test_update_the_sms_settting_in_billing_error_scenarios.py",
+      "test_update_the_sms_settting_in_billing_post_crud.py",
+      "test_update_the_sms_settting_in_billing_concurrency.py"
+    ]
+  },
+  "POST /api/v3/subscription/sms/preview": {
+    "method": "POST",
+    "path": "/api/v3/subscription/sms/preview",
+    "files": [
+      "test_get_the_estimation_to_charge_by_sms_concurrency.py",
+      "test_get_the_estimation_to_charge_by_sms_post_authentication.py",
+      "test_get_the_estimation_to_charge_by_sms_error_scenarios.py",
+      "test_get_the_estimation_to_charge_by_sms_post_crud.py"
+    ]
+  },
+  "GET /api/v3/report/saved-filters": {
+    "method": "GET",
+    "path": "/api/v3/report/saved-filters",
+    "files": [
+      "test_get_saved_filters_list_validation.py",
+      "test_get_saved_filters_list_get_authentication.py",
+      "test_get_saved_filters_list_error_scenarios.py",
+      "test_get_saved_filters_list_concurrency.py"
+    ]
+  },
+  "POST /api/v3/e-invoices/merchant-records/{id}/request/": {
+    "method": "POST",
+    "path": "/api/v3/e-invoices/merchant-records/{id}/request/",
+    "files": [
+      "test_request_e_invoice_post_authentication.py",
+      "test_request_e_invoice_error_scenarios.py",
+      "test_request_e_invoice_post_crud.py",
+      "test_request_e_invoice_concurrency.py"
+    ]
+  },
+  "GET /api/v3/campaign/campaign-infos": {
+    "method": "GET",
+    "path": "/api/v3/campaign/campaign-infos",
+    "files": [
+      "test_get_campain_infomation_get_authentication.py",
+      "test_get_campain_infomation_error_scenarios.py",
+      "test_get_campain_infomation_validation.py",
+      "test_get_campain_infomation_concurrency.py"
+    ]
+  },
+  "POST /api/membership/membersNewCount": {
+    "method": "POST",
+    "path": "/api/membership/membersNewCount",
+    "files": [
+      "test_members_new_count_concurrency.py",
+      "test_members_new_count_error_scenarios.py",
+      "test_members_new_count_post_crud.py",
+      "test_members_new_count_post_authentication.py"
+    ]
+  },
+  "POST /api/v3/campaign/{id}/toggle": {
+    "method": "POST",
+    "path": "/api/v3/campaign/{id}/toggle",
+    "files": [
+      "test_active_and_deactive_post_crud.py",
+      "test_active_and_deactive_post_authentication.py",
+      "test_active_and_deactive_concurrency.py",
+      "test_active_and_deactive_error_scenarios.py"
+    ]
+  },
+  "POST /api/v3/report/overview/sales": {
+    "method": "POST",
+    "path": "/api/v3/report/overview/sales",
+    "files": [
+      "test_get_sales_overview_concurrency.py",
+      "test_get_sales_overview_error_scenarios.py",
+      "test_get_sales_overview_post_authentication.py",
+      "test_get_sales_overview_post_crud.py"
+    ]
+  },
+  "POST /api/v3/test": {
+    "method": "POST",
+    "path": "/api/v3/test",
+    "files": [
+      "test_new_auth_validation.py"
+    ]
+  }
+}
