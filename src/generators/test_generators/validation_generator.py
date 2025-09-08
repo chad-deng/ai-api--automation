@@ -765,12 +765,14 @@ class ValidationTestGenerator:
 import httpx
 from typing import Dict, Any, List
 import json
+from src.config.settings import Settings
 
 # Enhanced Input Validation Tests for: {description}
 # Method: {method}
 # Path: {path}
 # Generated: Week 3 Enhanced Validation Test Generation
 
+settings = Settings()
 BASE_URL = settings.test_api_base_url
 
 class TestValidationEndpoint:

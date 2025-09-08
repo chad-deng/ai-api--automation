@@ -2,9 +2,12 @@
 
 ### ALWAYS use these tools when available:
 - `trash` instead of `rm` (no exceptions)
+- `python -m pytest` instead of `pytest` (for async test compatibility)
+- `./run_tests.sh` for running test suites
 
 ### NEVER suggest these deprecated commands:
 - rm (use trash)
+- pytest (use python -m pytest)
 
 # Development Partnership
 
@@ -24,6 +27,12 @@ These are not suggestions. Fix ALL issues before continuing.
 1. **Research**: Explore the codebase, understand existing patterns
 2. **Plan**: Create a detailed implementation plan and verify it with me  
 3. **Implement**: Execute the plan with validation checkpoints
+
+**🚨 MANDATORY USER CONFIRMATION:**
+- **MUST GET USER APPROVAL** before modifying any existing files
+- **MUST GET USER APPROVAL** before creating new files  
+- **MUST GET USER APPROVAL** before writing any code
+- Exception: Only read operations, analysis, and planning are allowed without confirmation
 
 **🚨 PHASE GATE ENFORCEMENT:**
 - **CODING IS BLOCKED** until Phases 1-10 are completed
@@ -386,3 +395,18 @@ These standards are **NON-NEGOTIABLE**. The automated checks will:
 - Alert when standards are violated
 
 **Remember**: Quality is everyone's responsibility. When in doubt, choose the higher standard.
+
+## 7. File Creation Policy
+
+### Folder Structure Enforcement
+- **NEVER create formal files outside of designated folders**
+- **Exceptions only for**: 
+  - `CLAUDE.md` (project configuration)
+  - `.env.*` files (environment configuration)
+- **All other files must be organized within appropriate folders**:
+  - Source code → `src/`
+  - Tests → `tests/`
+  - Documentation → `docs/`
+  - Scripts → `scripts/`
+  - Configuration → `config/`
+- **Root directory must remain clean** except for essential project files

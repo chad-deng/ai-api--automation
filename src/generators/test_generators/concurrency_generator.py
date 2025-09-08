@@ -110,11 +110,21 @@ class TestConcurrencyEndpoint:
     
     @pytest.fixture
     def auth_headers(self):
-        # Check if we have real tokens, skip if placeholders
+        # Check authentication method - support both token and cookie-based auth
         auth_token = settings.test_auth_token
+        
+        # If using cookie-based authentication, return empty headers
+        if auth_token and auth_token.lower() == "cookie_auth_enabled":
+            return {{}}  # Empty headers - authentication via cookies
+        
+        # Check if we have real tokens, skip if placeholders
         if not auth_token or any(placeholder in auth_token.lower() 
                                 for placeholder in ["placeholder", "here", "token_123", "your_", "concurrency_test"]):
+            # Check if we have cookies as backup
+            if settings.test_cookie_connect_sid:
+                return {{}}  # Use cookies instead
             pytest.skip("Real authentication token not configured - skipping concurrency tests")
+        
         return {{"Authorization": f"Bearer {{auth_token}}"}}
     
     @pytest.mark.asyncio

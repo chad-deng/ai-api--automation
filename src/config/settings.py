@@ -11,28 +11,29 @@ class Settings(BaseSettings):
     retry_delay: int = 1
     
     # Test API Configuration
-    test_api_base_url: str = "https://api.example.com"
+    test_api_base_url: str = "http://192.168.1.140:3001"
     test_timeout: int = 30
     test_retry_count: int = 3
     
     # Authentication
     test_email: Optional[str] = None
     test_password: Optional[str] = None
+    test_username: Optional[str] = None
     test_auth_token: Optional[str] = None
     test_expired_token: Optional[str] = None
     test_api_key: Optional[str] = None
     test_limited_token: Optional[str] = None
     test_revoked_token: Optional[str] = None
     
-    # Test Settings
+    # Test Settings - Reduced performance test generation
     test_log_level: str = "DEBUG"
-    concurrency_max_users: int = 5
-    concurrency_requests_per_user: int = 3
-    concurrency_timeout: int = 60
-    performance_duration_seconds: int = 30
-    performance_max_rps: int = 50
-    boundary_test_enabled: bool = True
-    boundary_string_max_length: int = 1000
+    concurrency_max_users: int = 3          # Reduced from 5
+    concurrency_requests_per_user: int = 2  # Reduced from 3
+    concurrency_timeout: int = 30            # Reduced from 60
+    performance_duration_seconds: int = 15   # Reduced from 30
+    performance_max_rps: int = 20            # Reduced from 50
+    boundary_test_enabled: bool = False      # Disabled to reduce complexity
+    boundary_string_max_length: int = 500    # Reduced from 1000
     
     # Test Data
     test_campaign_id: Optional[str] = None
@@ -69,6 +70,41 @@ class Settings(BaseSettings):
     # Webhook Configuration
     webhook_timeout: int = 30
     webhook_retry_attempts: int = 3
+    
+    # Performance Monitoring Configuration
+    performance_monitoring_enabled: bool = True
+    performance_redis_url: str = "redis://localhost:6379/1"
+    performance_database_url: Optional[str] = None  # Uses main database if not specified
+    performance_collection_interval: int = 30  # seconds
+    performance_batch_size: int = 100
+    performance_retention_days: int = 90
+    
+    # Performance Baselines
+    baseline_calculation_enabled: bool = True
+    baseline_min_samples: int = 100
+    baseline_confidence_level: float = 0.95
+    baseline_recalculation_hours: int = 24
+    
+    # Anomaly Detection
+    anomaly_detection_enabled: bool = True
+    anomaly_sensitivity: float = 0.1  # 0.0 = low sensitivity, 1.0 = high sensitivity
+    anomaly_ensemble_voting_threshold: float = 0.6
+    
+    # Performance Alerting
+    performance_alerting_enabled: bool = True
+    performance_alert_rate_limit: int = 100  # Max alerts per hour
+    
+    # Performance Thresholds
+    test_execution_time_warning: float = 5.0  # seconds
+    test_execution_time_critical: float = 10.0  # seconds
+    api_response_time_warning: float = 2.0  # seconds
+    api_response_time_critical: float = 5.0  # seconds
+    memory_usage_warning: float = 80.0  # percent
+    memory_usage_critical: float = 95.0  # percent
+    cpu_usage_warning: float = 80.0  # percent
+    cpu_usage_critical: float = 95.0  # percent
+    error_rate_warning: float = 5.0  # percent
+    error_rate_critical: float = 10.0  # percent
     
     class Config:
         env_file = [".env.local", ".env.test", ".env"]

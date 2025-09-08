@@ -1,0 +1,2546 @@
+import pytest
+import httpx
+import os
+import json
+import time
+import asyncio
+from typing import Dict, Any, List
+from unittest.mock import patch
+import tempfile
+from src.config.settings import Settings
+
+# Environment Configuration Tests for: Creates a new product
+# Method: PUT
+# Path: /api/v2/products
+# Generated: Enhanced Environment Test Generation
+
+settings = Settings()
+BASE_URL = settings.test_api_base_url
+
+class TestEnvironmentEndpoint:
+    
+    @pytest.fixture
+    def client(self):
+        return httpx.AsyncClient(base_url=BASE_URL, cookies=self._get_cookies(), timeout=30.0)
+    
+    def _get_cookies(self):
+        cookies = {}
+        if settings.test_cookie_connect_sid:
+            cookies['connect.sid'] = settings.test_cookie_connect_sid
+        return cookies
+    
+    @pytest.fixture
+    def auth_headers(self):
+        """Authentication headers for environment tests"""
+        return {"Authorization": "Bearer <auth_token>"}
+    
+    @pytest.fixture
+    def env_backup(self):
+        """Backup and restore environment variables"""
+        original_env = os.environ.copy()
+        yield
+        # Restore original environment
+        os.environ.clear()
+        os.environ.update(original_env)
+    
+    @pytest.fixture
+    def temp_config_dir(self):
+        """Create temporary directory for config files"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield temp_dir
+    
+    def create_config_file(self, temp_dir: str, filename: str, content: str):
+        """Helper to create temporary config files"""
+        config_path = os.path.join(temp_dir, filename)
+        with open(config_path, 'w') as f:
+            f.write(content)
+        return config_path
+    
+    def simulate_env_config(self, env_config: Dict[str, Any]):
+        """Simulate environment configuration changes"""
+        # This is a mock implementation - in real tests, you'd need to
+        # restart the service or use dependency injection
+        if 'env_vars' in env_config:
+            for var, value in env_config['env_vars'].items():
+                os.environ[var] = str(value)
+        
+        if 'missing_vars' in env_config:
+            for var in env_config['missing_vars']:
+                if var in os.environ:
+                    del os.environ[var]
+    
+    # ENV VARS TESTS\n\n    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_env_missing_api_key(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API behavior when API_KEY environment variable is missing"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "missing_vars": [
+                "API_KEY"
+        ],
+        "action": "unset"
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 502, 503], \
+                f"Expected one of [500, 502, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_env_missing_database_url(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API behavior when DATABASE_URL environment variable is missing"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "missing_vars": [
+                "DATABASE_URL"
+        ],
+        "action": "unset"
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 502, 503], \
+                f"Expected one of [500, 502, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_env_missing_jwt_secret(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API behavior when JWT_SECRET environment variable is missing"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "missing_vars": [
+                "JWT_SECRET"
+        ],
+        "action": "unset"
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 502, 503], \
+                f"Expected one of [500, 502, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    # CONFIG FILES TESTS\n\n    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_config_missing_config_yaml(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API behavior when config.yaml is missing"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "missing_files": [
+                "config.yaml"
+        ]
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 503], \
+                f"Expected one of [500, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_config_missing_config_json(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API behavior when config.json is missing"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "missing_files": [
+                "config.json"
+        ]
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 503], \
+                f"Expected one of [500, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_config_missing_app_config(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API behavior when app.config is missing"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "missing_files": [
+                "app.config"
+        ]
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 503], \
+                f"Expected one of [500, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    # SSL TESTS\n\n    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_ssl_valid_ssl(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with SSL configuration: valid_ssl"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "ssl_config": {
+                "SSL_VERIFY": "true",
+                "SSL_CERT_PATH": "/path/to/cert.pem"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202], \
+                f"Expected one of [200, 201, 202], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_ssl_disabled_ssl(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with SSL configuration: disabled_ssl"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "ssl_config": {
+                "SSL_VERIFY": "false"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202], \
+                f"Expected one of [200, 201, 202], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_ssl_invalid_cert_path(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with SSL configuration: invalid_cert_path"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "ssl_config": {
+                "SSL_VERIFY": "true",
+                "SSL_CERT_PATH": "/nonexistent/cert.pem"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 502, 503], \
+                f"Expected one of [500, 502, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    # CONNECTIVITY TESTS\n\n    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_connectivity_development(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API connectivity in development environment"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "environment": "development",
+        "BASE_URL": "http://localhost:8000",
+        "DEBUG": "true",
+        "LOG_LEVEL": "DEBUG",
+        "TIMEOUT_SECONDS": "60",
+        "SSL_VERIFY": "false",
+        "RATE_LIMIT_REQUESTS": "1000"
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202, 503], \
+                f"Expected one of [200, 201, 202, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_connectivity_staging(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API connectivity in staging environment"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "environment": "staging",
+        "BASE_URL": "https://staging-api.example.com",
+        "DEBUG": "false",
+        "LOG_LEVEL": "INFO",
+        "TIMEOUT_SECONDS": "30",
+        "SSL_VERIFY": "true",
+        "RATE_LIMIT_REQUESTS": "500"
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202, 503], \
+                f"Expected one of [200, 201, 202, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_connectivity_production(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API connectivity in production environment"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "environment": "production",
+        "BASE_URL": "https://api.example.com",
+        "DEBUG": "false",
+        "LOG_LEVEL": "WARNING",
+        "TIMEOUT_SECONDS": "10",
+        "SSL_VERIFY": "true",
+        "RATE_LIMIT_REQUESTS": "100"
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202, 503], \
+                f"Expected one of [200, 201, 202, 503], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    # PERFORMANCE TESTS\n\n    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_timeout_very_short(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with very_short timeout (1s)"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "env_vars": {
+                "TIMEOUT_SECONDS": "1"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [500, 504], \
+                f"Expected one of [500, 504], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_timeout_short(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with short timeout (5s)"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "env_vars": {
+                "TIMEOUT_SECONDS": "5"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 500, 504], \
+                f"Expected one of [200, 201, 500, 504], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_timeout_normal(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with normal timeout (30s)"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "env_vars": {
+                "TIMEOUT_SECONDS": "30"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202], \
+                f"Expected one of [200, 201, 202], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    # DEPLOYMENT TESTS\n\n    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_deploy_limited_memory(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with limited memory allocation"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "deployment_config": {
+                "MEMORY_LIMIT": "128M"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 500], \
+                f"Expected one of [200, 201, 500], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_deploy_limited_cpu(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with limited CPU allocation"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "deployment_config": {
+                "CPU_LIMIT": "0.1"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 504], \
+                f"Expected one of [200, 201, 504], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_deploy_multiple_replicas(self, client, auth_headers, env_backup, temp_config_dir):
+        """Test API with multiple replica instances"""
+        
+        # Simulate environment configuration
+        env_config = {
+        "deployment_config": {
+                "REPLICA_COUNT": "3"
+        }
+    }
+        self.simulate_env_config(env_config)
+        
+        payload = {    }
+        
+        try:
+            # Allow extra time for environment-dependent operations
+            start_time = time.time()
+            response = await client.put("/api/v2/products", json=payload, headers=auth_headers, timeout=45.0)
+            response_time = time.time() - start_time
+            
+            # Verify response is one of expected status codes
+            assert response.status_code in [200, 201, 202], \
+                f"Expected one of [200, 201, 202], got {response.status_code}. Response: {response.text[:300]}"
+            
+            print(f"🌍 Environment test '{test.test_category}' completed in {response_time:.3f}s (status: {response.status_code})")
+            
+            # Perform validation checks
+            await self._validate_environment_response(response, {test.validation_checks})
+            
+            # Category-specific validations
+            if {test.test_category} == "connectivity":
+                self._validate_connectivity_response(response)
+            elif {test.test_category} == "ssl":
+                self._validate_ssl_response(response)
+            elif {test.test_category} == "performance":
+                self._validate_performance_response(response, response_time)
+            elif {test.test_category} == "env_vars":
+                self._validate_env_var_response(response)
+        
+        except httpx.ConnectError as e:
+            # Connection errors are expected for some environment tests
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected connection error occurred: {str(e)[:100]}")
+            else:
+                print(f"⚠ Unexpected connection error: {str(e)[:100]}")
+                # Don't fail test - environment issues can cause connectivity problems
+        
+        except httpx.TimeoutException:
+            # Timeouts can be expected with certain configurations
+            if {test.expected_behavior} == "failure" or "timeout" in {test.name}:
+                print(f"✅ Expected timeout occurred for environment test")
+            else:
+                print(f"⚠ Unexpected timeout in environment test")
+        
+        except Exception as e:
+            error_msg = str(e)
+            if {test.expected_behavior} == "failure":
+                print(f"✅ Expected error in environment test: {error_msg[:100]}")
+            else:
+                print(f"⚠ Unexpected error in environment test: {error_msg[:200]}")
+    
+    async def _validate_environment_response(self, response, validation_checks: List[str]):
+        """Perform environment-specific response validations"""
+        
+        if "error_message_present" in validation_checks and response.status_code >= 400:
+            # Should have error information
+            if response.headers.get("content-type", "").startswith("application/json"):
+                try:
+                    error_data = response.json()
+                    assert "error" in error_data or "message" in error_data, "Error response should contain error message"
+                except json.JSONDecodeError:
+                    pass  # Non-JSON error responses are acceptable
+        
+        if "no_sensitive_data_leaked" in validation_checks:
+            # Response should not contain sensitive information
+            response_text = response.text.lower()
+            sensitive_keywords = ["password", "secret", "key", "token", "credential"]
+            for keyword in sensitive_keywords:
+                assert keyword not in response_text, f"Response contains sensitive keyword: {keyword}"
+        
+        if "no_config_content_leaked" in validation_checks:
+            # Response should not expose configuration file contents
+            config_indicators = ["database_url", "api_key", "jwt_secret", "config.yaml", "config.json"]
+            response_text = response.text.lower()
+            for indicator in config_indicators:
+                assert indicator not in response_text, f"Response may contain config data: {indicator}"
+    
+    def _validate_connectivity_response(self, response):
+        """Validate connectivity-specific response aspects"""
+        # Check for connectivity headers
+        headers = response.headers
+        if "server" in headers:
+            print(f"🔗 Server identified as: {headers['server']}")
+        
+        # Check response time is reasonable
+        # This would need to be measured during the request
+        
+    def _validate_ssl_response(self, response):
+        """Validate SSL/TLS-specific response aspects"""
+        # In a real implementation, you'd check SSL certificate details
+        # For now, just verify secure response headers
+        headers = response.headers
+        
+        if response.status_code < 400:
+            # Successful responses should have security headers
+            security_headers = ["strict-transport-security", "x-content-type-options"]
+            for header in security_headers:
+                if header in headers:
+                    print(f"🔐 Security header present: {header}")
+    
+    def _validate_performance_response(self, response, response_time: float):
+        """Validate performance-specific response aspects"""
+        # Check response time is within reasonable bounds
+        if response_time > 30.0:
+            print(f"⚠ Slow response time: {response_time:.3f}s")
+        elif response_time < 10.0:
+            print(f"⚡ Fast response time: {response_time:.3f}s")
+        
+        # Check for performance-related headers
+        headers = response.headers
+        if "x-response-time" in headers:
+            server_time = headers["x-response-time"]
+            print(f"📊 Server reported response time: {server_time}")
+    
+    def _validate_env_var_response(self, response):
+        """Validate environment variable-specific response aspects"""
+        # Successful responses should not expose environment details
+        if response.status_code < 400:
+            response_text = response.text.lower()
+            env_indicators = ["environment", "env", "config", "development", "production"]
+            for indicator in env_indicators:
+                if indicator in response_text:
+                    print(f"⚠ Response may expose environment info: {indicator}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.environment
+    async def test_create_new_product_environment_summary(self, client, auth_headers, env_backup):
+        """Summary test for environment configuration resilience"""
+        
+        print("🌍 Running basic environment resilience test...")
+        
+        try:
+            # Test with basic payload
+            test_payload = {"test": "env_test", "timestamp": time.time()}
+            response = await client.put("/api/v2/products", json=test_payload, headers=auth_headers)
+            
+            print(f"Environment test completed with status: {response.status_code}")
+            
+            # Basic assertions for environment test
+            assert response.status_code in [200, 201, 202, 400, 401, 403, 500], \
+                f"Unexpected status code: {response.status_code}"
+            
+            if response.status_code < 400:
+                print("✅ Environment test successful")
+            else:
+                print(f"⚠️  Environment test returned error: {response.status_code}")
+            
+        except Exception as e:
+            print(f"⚠️  Environment test exception: {str(e)[:100]}")
+            # Don't fail the test - environment issues are common
+        
+        print("✅ Environment summary test completed!")

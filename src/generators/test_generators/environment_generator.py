@@ -593,12 +593,14 @@ import asyncio
 from typing import Dict, Any, List
 from unittest.mock import patch
 import tempfile
+from src.config.settings import Settings
 
 # Environment Configuration Tests for: {description}
 # Method: {method}
 # Path: {path}
 # Generated: Enhanced Environment Test Generation
 
+settings = Settings()
 BASE_URL = settings.test_api_base_url
 
 class TestEnvironmentEndpoint:
@@ -616,7 +618,7 @@ class TestEnvironmentEndpoint:
     @pytest.fixture
     def auth_headers(self):
         """Authentication headers for environment tests"""
-        return {{"Authorization": "Bearer {auth_token}"}}
+        return {{"Authorization": "Bearer <auth_token>"}}
     
     @pytest.fixture
     def env_backup(self):

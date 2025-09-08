@@ -1,0 +1,1682 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Beep Table Ordering API",
+    "description": "A comprehensive API for managing table ordering, food delivery, and customer interactions for Beep application. This API supports consumer management, store operations, shopping cart functionality, transactions, payments, and loyalty rewards.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "StoreHub Development Team",
+      "url": "https://beepit.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://{business}.beepit.com",
+      "description": "Production environment",
+      "variables": {
+        "business": {
+          "default": "demo",
+          "description": "Business subdomain"
+        }
+      }
+    },
+    {
+      "url": "http://localhost:7000",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    },
+    {
+      "SessionAuth": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check endpoint",
+        "operationId": "healthCheck",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "health": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ping": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Check authentication status",
+        "operationId": "pingAuth",
+        "responses": {
+          "200": {
+            "description": "Authentication status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login or registration",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "phoneNumber": {
+                    "type": "string"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/login/guest": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Guest login",
+        "operationId": "guestLogin",
+        "responses": {
+          "200": {
+            "description": "Guest login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "delete": {
+        "tags": ["Authentication"],
+        "summary": "User logout",
+        "operationId": "logout",
+        "security": [{"ApiKeyAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/consumers/{id}/profile": {
+      "get": {
+        "tags": ["Consumer"],
+        "summary": "Get consumer profile",
+        "operationId": "getConsumerProfile",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConsumerId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consumer profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ConsumerProfile"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Consumer"],
+        "summary": "Update consumer profile",
+        "operationId": "updateConsumerProfile",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConsumerId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumerProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/consumers/{id}/address": {
+      "get": {
+        "tags": ["Consumer"],
+        "summary": "Get consumer addresses",
+        "operationId": "getConsumerAddresses",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConsumerId"
+          },
+          {
+            "$ref": "#/components/parameters/Latitude"
+          },
+          {
+            "$ref": "#/components/parameters/Longitude"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Addresses retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Address"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Consumer"],
+        "summary": "Add new address",
+        "operationId": "addConsumerAddress",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConsumerId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddressCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Address added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/consumers/{id}/loyalty": {
+      "get": {
+        "tags": ["Consumer"],
+        "summary": "Get consumer loyalty information",
+        "operationId": "getConsumerLoyalty",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConsumerId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loyalty information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/LoyaltyInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/consumers/{id}/transactions": {
+      "get": {
+        "tags": ["Consumer"],
+        "summary": "Get consumer transaction history",
+        "operationId": "getConsumerTransactions",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConsumerId"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction history retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Transaction"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/stores/search": {
+      "get": {
+        "tags": ["Store"],
+        "summary": "Search stores",
+        "operationId": "searchStores",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Latitude"
+          },
+          {
+            "$ref": "#/components/parameters/Longitude"
+          },
+          {
+            "name": "shippingType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["delivery", "pickup", "dineIn", "takeaway"]
+            }
+          },
+          {
+            "name": "business",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stores retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Store"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cart": {
+      "get": {
+        "tags": ["Shopping Cart"],
+        "summary": "Get shopping cart",
+        "operationId": "getShoppingCart",
+        "parameters": [
+          {
+            "name": "business",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Latitude"
+          },
+          {
+            "$ref": "#/components/parameters/Longitude"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shopping cart retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ShoppingCart"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/v3/cart/items": {
+      "post": {
+        "tags": ["Shopping Cart"],
+        "summary": "Add items to cart (v3)",
+        "operationId": "addCartItems",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "business": {
+                    "type": "string"
+                  },
+                  "storeId": {
+                    "type": "string"
+                  },
+                  "tableId": {
+                    "type": "string"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/CartItemCreate"
+                    }
+                  }
+                },
+                "required": ["business", "storeId", "items"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Items added to cart successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/v3/transactions/{receiptNumber}": {
+      "get": {
+        "tags": ["Transaction"],
+        "summary": "Get transaction details",
+        "operationId": "getTransaction",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReceiptNumber"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Transaction"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v3/transactions/{receiptNumber}/status": {
+      "get": {
+        "tags": ["Transaction"],
+        "summary": "Get transaction status",
+        "operationId": "getTransactionStatus",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReceiptNumber"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "$ref": "#/components/schemas/OrderStatusType"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v3/transactions/{receiptNumber}/status/cancel": {
+      "put": {
+        "tags": ["Transaction"],
+        "summary": "Cancel transaction",
+        "operationId": "cancelTransaction",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReceiptNumber"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/payment": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Create payment",
+        "operationId": "createPayment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "receiptNumber": {
+                    "type": "string"
+                  },
+                  "paymentMethod": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  }
+                },
+                "required": ["receiptNumber", "paymentMethod", "amount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/feedback": {
+      "get": {
+        "tags": ["Feedback"],
+        "summary": "Get feedback",
+        "operationId": "getFeedback",
+        "parameters": [
+          {
+            "name": "business",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feedback retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Feedback"],
+        "summary": "Submit feedback",
+        "operationId": "submitFeedback",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/v3/notifications": {
+      "get": {
+        "tags": ["Notification"],
+        "summary": "Get notifications",
+        "operationId": "getNotifications",
+        "security": [{"ApiKeyAuth": []}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/StandardResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Notification"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/memberships": {
+      "get": {
+        "tags": ["Membership"],
+        "summary": "Get business membership tiers",
+        "operationId": "getMembershipTiers",
+        "parameters": [
+          {
+            "name": "business",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Membership tiers retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "storehub-token",
+        "description": "Token-based authentication using storehub-token header"
+      },
+      "SessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sid",
+        "description": "Session-based authentication using express-session"
+      }
+    },
+    "parameters": {
+      "ConsumerId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Consumer ID",
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{24}$"
+        }
+      },
+      "ReceiptNumber": {
+        "name": "receiptNumber",
+        "in": "path",
+        "required": true,
+        "description": "Transaction receipt number",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Latitude": {
+        "name": "latitude",
+        "in": "header",
+        "description": "User latitude coordinate",
+        "schema": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        }
+      },
+      "Longitude": {
+        "name": "longitude",
+        "in": "header",
+        "description": "User longitude coordinate",
+        "schema": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "description": "Page number for pagination (0-based)",
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "PageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "description": "Number of items per page",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40,
+          "default": 10
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - Token expired or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden - Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "StandardResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Response code - '00000' for success, error codes for failures",
+            "example": "00000"
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "OK"
+          },
+          "description": {
+            "type": "string",
+            "description": "Response description",
+            "example": "OK"
+          },
+          "pagination": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Pagination"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data": {
+            "description": "Response data"
+          },
+          "extra": {
+            "type": "object",
+            "nullable": true,
+            "description": "Extra information"
+          }
+        },
+        "required": ["code", "message", "description"]
+      },
+      "ErrorResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StandardResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Error code",
+                "enum": ["40001", "40002", "40003", "40004", "40005", "40006", "40010", "40011", "40012", "40016", "40018", "40019", "50000"]
+              },
+              "data": {
+                "type": "null"
+              },
+              "stack": {
+                "type": "string",
+                "description": "Error stack trace (development only)"
+              }
+            }
+          }
+        ]
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "totalItems": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ConsumerProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Consumer unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Consumer full name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Consumer email address"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Consumer phone number"
+          },
+          "birthday": {
+            "type": "string",
+            "format": "date",
+            "description": "Consumer birthday (YYYY-MM-DD)"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female", "other"],
+            "description": "Consumer gender"
+          },
+          "profileImage": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to consumer profile image"
+          }
+        }
+      },
+      "ConsumerProfileUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^[+]?[0-9\\-\\s()]{7,20}$"
+          },
+          "birthday": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female", "other"]
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Address unique identifier"
+          },
+          "contactName": {
+            "type": "string",
+            "description": "Contact person name"
+          },
+          "contactPhoneNumber": {
+            "type": "string",
+            "description": "Contact person phone number"
+          },
+          "address": {
+            "type": "string",
+            "description": "Full address string"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Address latitude coordinate"
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Address longitude coordinate"
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "Postal code"
+          },
+          "city": {
+            "type": "string",
+            "description": "City name"
+          },
+          "state": {
+            "type": "string",
+            "description": "State name"
+          },
+          "country": {
+            "type": "string",
+            "description": "Country name"
+          }
+        },
+        "required": ["contactName", "contactPhoneNumber", "address"]
+      },
+      "AddressCreate": {
+        "type": "object",
+        "properties": {
+          "contactName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "contactPhoneNumber": {
+            "type": "string",
+            "pattern": "^[+]?[0-9\\-\\s()]{7,20}$"
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "postalCode": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": ["contactName", "contactPhoneNumber", "address"]
+      },
+      "LoyaltyInfo": {
+        "type": "object",
+        "properties": {
+          "totalCashback": {
+            "type": "number",
+            "description": "Total cashback amount"
+          },
+          "availableCashback": {
+            "type": "number",
+            "description": "Available cashback amount"
+          },
+          "totalPoints": {
+            "type": "number",
+            "description": "Total loyalty points"
+          },
+          "tier": {
+            "type": "string",
+            "description": "Current loyalty tier"
+          }
+        }
+      },
+      "Store": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Store unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Store name"
+          },
+          "businessName": {
+            "type": "string",
+            "description": "Business name"
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "Store avatar URL"
+          },
+          "address": {
+            "type": "string",
+            "description": "Store address"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Store latitude coordinate"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Store longitude coordinate"
+          },
+          "isOnline": {
+            "type": "boolean",
+            "description": "Whether store is online"
+          },
+          "fulfillmentOptions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["delivery", "pickup", "dineIn", "takeaway"]
+            },
+            "description": "Available fulfillment options"
+          },
+          "deliveryRadius": {
+            "type": "number",
+            "description": "Delivery radius in kilometers"
+          },
+          "geoDistance": {
+            "type": "number",
+            "description": "Distance from user location"
+          },
+          "reviewInfo": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": "string",
+                "description": "Average rating"
+              },
+              "totalReviews": {
+                "type": "integer",
+                "description": "Total number of reviews"
+              }
+            }
+          }
+        },
+        "required": ["id", "name", "address", "isOnline"]
+      },
+      "ShoppingCart": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItem"
+            },
+            "description": "Available cart items"
+          },
+          "unavailableItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItem"
+            },
+            "description": "Unavailable cart items"
+          },
+          "total": {
+            "type": "number",
+            "description": "Total cart amount"
+          },
+          "subtotal": {
+            "type": "number",
+            "description": "Subtotal amount"
+          },
+          "tax": {
+            "type": "number",
+            "description": "Tax amount"
+          },
+          "shippingFee": {
+            "type": "number",
+            "description": "Shipping fee"
+          },
+          "serviceCharge": {
+            "type": "number",
+            "description": "Service charge"
+          },
+          "cashback": {
+            "type": "number",
+            "description": "Applied cashback amount"
+          },
+          "voucher": {
+            "$ref": "#/components/schemas/AppliedVoucher"
+          }
+        }
+      },
+      "CartItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Cart item ID"
+          },
+          "productId": {
+            "type": "string",
+            "description": "Product ID"
+          },
+          "productName": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Item quantity"
+          },
+          "displayPrice": {
+            "type": "number",
+            "description": "Display price per item"
+          },
+          "stockStatus": {
+            "type": "string",
+            "enum": ["IN_STOCK", "OUT_OF_STOCK", "LOW_STOCK", "NOT_TRACK_INVENTORY", "UNAVAILABLE"],
+            "description": "Stock availability status"
+          },
+          "selectedOptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelectedOption"
+            },
+            "description": "Selected product options"
+          }
+        },
+        "required": ["id", "productId", "productName", "quantity", "displayPrice", "stockStatus"]
+      },
+      "CartItemCreate": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "selectedOptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelectedOption"
+            }
+          }
+        },
+        "required": ["productId", "quantity"]
+      },
+      "SelectedOption": {
+        "type": "object",
+        "properties": {
+          "optionId": {
+            "type": "string"
+          },
+          "optionName": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          }
+        }
+      },
+      "AppliedVoucher": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "discountType": {
+            "type": "string",
+            "enum": ["percentage", "amount"]
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "receiptNumber": {
+            "type": "string",
+            "description": "Transaction receipt number"
+          },
+          "business": {
+            "type": "string",
+            "description": "Business identifier"
+          },
+          "storeId": {
+            "type": "string",
+            "description": "Store identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatusType"
+          },
+          "total": {
+            "type": "number",
+            "description": "Total transaction amount"
+          },
+          "subtotal": {
+            "type": "number",
+            "description": "Subtotal amount"
+          },
+          "tax": {
+            "type": "number",
+            "description": "Tax amount"
+          },
+          "shippingFee": {
+            "type": "number",
+            "description": "Shipping fee"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            },
+            "description": "Ordered items"
+          },
+          "shippingType": {
+            "type": "string",
+            "enum": ["delivery", "pickup", "dineIn", "takeaway"],
+            "description": "Shipping/fulfillment type"
+          },
+          "createdTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Transaction creation timestamp"
+          },
+          "paidDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Payment timestamp"
+          },
+          "fulfillmentDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fulfillment timestamp"
+          }
+        },
+        "required": ["receiptNumber", "business", "storeId", "status", "total", "shippingType", "createdTime"]
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "totalPrice": {
+            "type": "number"
+          },
+          "selectedOptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelectedOption"
+            }
+          }
+        },
+        "required": ["id", "productId", "productName", "quantity", "unitPrice", "totalPrice"]
+      },
+      "OrderStatusType": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "CONFIRMED",
+          "PREPARING",
+          "READY_FOR_PICKUP",
+          "OUT_FOR_DELIVERY",
+          "DELIVERED",
+          "COMPLETED",
+          "CANCELLED",
+          "FAILED"
+        ],
+        "description": "Transaction status"
+      },
+      "FeedbackCreate": {
+        "type": "object",
+        "properties": {
+          "business": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "receiptNumber": {
+            "type": "string"
+          }
+        },
+        "required": ["business", "storeId", "rating"]
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["order", "promotion", "system"]
+          },
+          "isRead": {
+            "type": "boolean"
+          },
+          "createdTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "System health and status endpoints"
+    },
+    {
+      "name": "Authentication",
+      "description": "User authentication and session management"
+    },
+    {
+      "name": "Consumer",
+      "description": "Consumer profile and account management"
+    },
+    {
+      "name": "Store",
+      "description": "Store search and information"
+    },
+    {
+      "name": "Shopping Cart",
+      "description": "Shopping cart management"
+    },
+    {
+      "name": "Transaction",
+      "description": "Order and transaction management"
+    },
+    {
+      "name": "Payment",
+      "description": "Payment processing"
+    },
+    {
+      "name": "Feedback",
+      "description": "Customer feedback and reviews"
+    },
+    {
+      "name": "Notification",
+      "description": "Push notifications and alerts"
+    },
+    {
+      "name": "Membership",
+      "description": "Loyalty and membership management"
+    }
+  ]
+}

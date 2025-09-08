@@ -1,1 +1,0 @@
-# Database optimization and caching module

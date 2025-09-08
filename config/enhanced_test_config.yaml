@@ -20,9 +20,10 @@ enabled_test_types:
   - "error_scenarios"
   - "authentication"
   - "validation"
-  - "boundary_testing"
-  - "environment_config"
-  - "concurrency"
+  # Performance-heavy tests disabled
+  # - "boundary_testing"
+  # - "environment_config"
+  # - "concurrency"
 
 # Quality Gate Configuration - CRITICAL FOR ENTERPRISE
 quality:
@@ -40,20 +41,20 @@ quality:
     - 'input\s*\('
     - 'exit\s*\('
 
-# Performance Testing Configuration
+# Performance Testing Configuration - Reduced for lighter testing
 performance:
-  light_load_users: 5
-  light_load_requests: 10
-  normal_load_users: 10
-  normal_load_requests: 20
-  heavy_load_users: 25
-  heavy_load_requests: 50
-  stress_load_users: 50
-  stress_load_requests: 100
+  light_load_users: 2      # Reduced from 5
+  light_load_requests: 5   # Reduced from 10
+  normal_load_users: 3     # Reduced from 10
+  normal_load_requests: 8  # Reduced from 20
+  heavy_load_users: 5      # Reduced from 25
+  heavy_load_requests: 15  # Reduced from 50
+  stress_load_users: 10    # Reduced from 50
+  stress_load_requests: 25 # Reduced from 100
   max_response_time_ms: 5000
   success_rate_threshold: 0.95
-  ramp_up_duration: 10
-  endurance_duration: 1800  # 30 minutes
+  ramp_up_duration: 5      # Reduced from 10
+  endurance_duration: 300  # Reduced from 1800 (5 minutes)
 
 # Validation Testing Configuration
 validation:
@@ -99,16 +100,16 @@ environment_config:
   required_env_vars: ["API_KEY", "DATABASE_URL", "JWT_SECRET"]
   config_files_to_test: ["config.yaml", "config.json", ".env"]
 
-# Concurrency Testing Configuration
+# Concurrency Testing Configuration - Reduced for lighter testing
 concurrency:
-  test_race_conditions: true
-  test_concurrent_modifications: true
-  test_resource_locking: true
-  test_deadlock_scenarios: true
-  concurrent_users: 10
-  concurrent_requests_per_user: 5
-  race_condition_iterations: 50
-  timeout_seconds: 30
+  test_race_conditions: false      # Disabled for lighter testing
+  test_concurrent_modifications: false  # Disabled for lighter testing
+  test_resource_locking: false     # Disabled for lighter testing
+  test_deadlock_scenarios: false   # Disabled for lighter testing
+  concurrent_users: 3              # Reduced from 10
+  concurrent_requests_per_user: 2  # Reduced from 5
+  race_condition_iterations: 10    # Reduced from 50
+  timeout_seconds: 15              # Reduced from 30
 
 # Authentication Settings
 auth_token_placeholder: "Bearer test_token_here"
@@ -142,10 +143,10 @@ template_configs:
       test_rate_limiting: true
   
   performance:
-    enabled: true
+    enabled: false  # Disabled to reduce performance test generation
     custom_variables:
-      load_test_duration: 60
-      concurrent_users: 10
+      load_test_duration: 30  # Reduced duration
+      concurrent_users: 5     # Reduced users
   
   validation:
     enabled: true

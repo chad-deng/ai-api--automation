@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, JSON, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, JSON, ForeignKey, Enum, Float, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy import create_engine
@@ -61,6 +61,28 @@ class ApprovalWorkflowStatus(enum.Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+class TestExecutionStatus(enum.Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    PASSED = "passed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+    ERROR = "error"
+
+class QualityGateStatus(enum.Enum):
+    PASSED = "passed"
+    FAILED = "failed"
+    WARNING = "warning"
+    PENDING = "pending"
+
+class TemplateType(enum.Enum):
+    VALIDATION = "validation"
+    BOUNDARY = "boundary"
+    PERFORMANCE = "performance"
+    ERROR_HANDLING = "error_handling"
+    CONCURRENCY = "concurrency"
+    ENVIRONMENT = "environment"
 
 class WebhookEvent(Base):
     __tablename__ = "webhook_events"
@@ -366,6 +388,274 @@ class Approval(Base):
     # Relationships
     request = relationship("ApprovalRequest", back_populates="approvals")
     stage_instance = relationship("ApprovalStageInstance", back_populates="approvals")
+
+# Analytics and Dashboard Models for Phase 3
+
+class TestExecution(Base):
+    """
+    Comprehensive test execution tracking for dashboard analytics.
+    Captures detailed metrics for performance monitoring and quality assessment.
+    """
+    __tablename__ = "test_executions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    generated_test_id = Column(Integer, ForeignKey("generated_tests.id"), nullable=False, index=True)
+    webhook_event_id = Column(String(255), nullable=False, index=True)
+    
+    # Execution details
+    execution_id = Column(String(255), unique=True, nullable=False, index=True)
+    status = Column(Enum(TestExecutionStatus), default=TestExecutionStatus.PENDING, nullable=False)
+    test_framework = Column(String(100), nullable=True)  # pytest, unittest, etc.
+    
+    # Performance metrics
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=True)
+    duration_seconds = Column(Float, nullable=True)
+    cpu_usage_percent = Column(Float, nullable=True)
+    memory_usage_mb = Column(Float, nullable=True)
+    
+    # Quality metrics
+    assertions_count = Column(Integer, default=0)
+    assertions_passed = Column(Integer, default=0)
+    assertions_failed = Column(Integer, default=0)
+    quality_score = Column(Float, nullable=True)  # 0.0-1.0
+    
+    # Coverage and validation
+    code_coverage_percent = Column(Float, nullable=True)
+    endpoint_coverage_percent = Column(Float, nullable=True)
+    validation_rules_passed = Column(Integer, default=0)
+    validation_rules_failed = Column(Integer, default=0)
+    
+    # Results and diagnostics
+    exit_code = Column(Integer, nullable=True)
+    stdout_log = Column(Text, nullable=True)
+    stderr_log = Column(Text, nullable=True)
+    error_message = Column(Text, nullable=True)
+    failure_reason = Column(String(500), nullable=True)
+    
+    # Environment and context
+    environment_name = Column(String(100), nullable=True)
+    python_version = Column(String(50), nullable=True)
+    dependencies_hash = Column(String(255), nullable=True)
+    git_commit_hash = Column(String(255), nullable=True)
+    
+    # Metadata
+    execution_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    generated_test = relationship("GeneratedTest")
+    quality_checks = relationship("QualityCheck", back_populates="test_execution")
+    performance_metrics = relationship("PerformanceMetric", back_populates="test_execution")
+
+class QualityCheck(Base):
+    """
+    Individual quality check results for comprehensive quality gate tracking.
+    Supports the 90% quality threshold enforcement.
+    """
+    __tablename__ = "quality_checks"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    test_execution_id = Column(Integer, ForeignKey("test_executions.id"), nullable=False, index=True)
+    
+    # Check details
+    check_name = Column(String(255), nullable=False)
+    check_type = Column(String(100), nullable=False)  # syntax, coverage, security, business_logic
+    check_category = Column(String(100), nullable=False)  # automated, manual, hybrid
+    
+    # Results
+    status = Column(Enum(QualityGateStatus), nullable=False)
+    score = Column(Float, nullable=True)  # 0.0-1.0
+    weight = Column(Float, default=1.0)  # Weight in overall quality score
+    
+    # Details and diagnostics
+    message = Column(Text, nullable=True)
+    details = Column(JSON, nullable=True)
+    recommendations = Column(Text, nullable=True)
+    
+    # Timing
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    
+    # Metadata
+    check_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationships
+    test_execution = relationship("TestExecution", back_populates="quality_checks")
+
+class PerformanceMetric(Base):
+    """
+    Detailed performance metrics for response time and system performance tracking.
+    """
+    __tablename__ = "performance_metrics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    test_execution_id = Column(Integer, ForeignKey("test_executions.id"), nullable=False, index=True)
+    
+    # API performance
+    endpoint_path = Column(String(500), nullable=True)
+    http_method = Column(String(10), nullable=True)
+    response_time_ms = Column(Float, nullable=True)
+    status_code = Column(Integer, nullable=True)
+    
+    # Request/Response details
+    request_size_bytes = Column(Integer, nullable=True)
+    response_size_bytes = Column(Integer, nullable=True)
+    connection_time_ms = Column(Float, nullable=True)
+    ssl_handshake_time_ms = Column(Float, nullable=True)
+    
+    # Performance thresholds
+    response_threshold_met = Column(Boolean, default=True)
+    performance_baseline_met = Column(Boolean, default=True)
+    
+    # System metrics during test
+    system_cpu_percent = Column(Float, nullable=True)
+    system_memory_percent = Column(Float, nullable=True)
+    system_disk_io_mb = Column(Float, nullable=True)
+    system_network_io_mb = Column(Float, nullable=True)
+    
+    # Database performance (if applicable)
+    db_connection_count = Column(Integer, nullable=True)
+    db_query_count = Column(Integer, nullable=True)
+    db_query_duration_ms = Column(Float, nullable=True)
+    
+    # Metadata
+    metric_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationships
+    test_execution = relationship("TestExecution", back_populates="performance_metrics")
+
+class TemplateUsageMetric(Base):
+    """
+    Template usage analytics for optimization recommendations and effectiveness tracking.
+    """
+    __tablename__ = "template_usage_metrics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    generated_test_id = Column(Integer, ForeignKey("generated_tests.id"), nullable=False, index=True)
+    
+    # Template information
+    template_name = Column(String(255), nullable=False)
+    template_type = Column(Enum(TemplateType), nullable=False)
+    template_version = Column(String(50), nullable=True)
+    template_hash = Column(String(255), nullable=True)
+    
+    # Usage metrics
+    generation_time_ms = Column(Float, nullable=True)
+    lines_generated = Column(Integer, nullable=True)
+    complexity_score = Column(Float, nullable=True)  # 0.0-1.0
+    
+    # Effectiveness metrics
+    success_rate = Column(Float, nullable=True)  # Based on execution results
+    quality_contribution = Column(Float, nullable=True)  # Contribution to overall quality
+    performance_impact = Column(Float, nullable=True)  # Impact on test performance
+    
+    # API context
+    api_endpoint_path = Column(String(500), nullable=True)
+    api_method = Column(String(10), nullable=True)
+    api_complexity_level = Column(String(50), nullable=True)  # simple, medium, complex
+    
+    # Generation context
+    openapi_schema_size = Column(Integer, nullable=True)
+    parameters_count = Column(Integer, nullable=True)
+    response_schemas_count = Column(Integer, nullable=True)
+    
+    # Metadata
+    usage_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    
+    # Relationships
+    generated_test = relationship("GeneratedTest")
+
+class DashboardAlert(Base):
+    """
+    Alert management for centralized notification and threshold monitoring.
+    """
+    __tablename__ = "dashboard_alerts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    alert_id = Column(String(255), unique=True, nullable=False, index=True)
+    
+    # Alert classification
+    alert_type = Column(String(100), nullable=False)  # performance, quality, system, workflow
+    severity = Column(String(50), nullable=False)  # info, warning, error, critical
+    category = Column(String(100), nullable=False)  # threshold_breach, system_error, quality_gate
+    
+    # Alert content
+    title = Column(String(500), nullable=False)
+    message = Column(Text, nullable=False)
+    details = Column(JSON, nullable=True)
+    
+    # Status tracking
+    status = Column(String(50), default="active", nullable=False)  # active, acknowledged, resolved, suppressed
+    acknowledged_by = Column(String(255), nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    resolved_by = Column(String(255), nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    
+    # Threshold and trigger information
+    threshold_name = Column(String(255), nullable=True)
+    threshold_value = Column(Float, nullable=True)
+    actual_value = Column(Float, nullable=True)
+    trigger_condition = Column(String(255), nullable=True)
+    
+    # Context and relationships
+    related_entity_type = Column(String(100), nullable=True)  # test_execution, review_workflow, etc.
+    related_entity_id = Column(String(255), nullable=True)
+    
+    # Timing
+    first_triggered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_triggered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    trigger_count = Column(Integer, default=1, nullable=False)
+    
+    # Metadata
+    alert_metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+class DashboardMetricsCache(Base):
+    """
+    Optimized metrics caching for dashboard performance with <2 second load times.
+    """
+    __tablename__ = "dashboard_metrics_cache"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    cache_key = Column(String(255), unique=True, nullable=False, index=True)
+    
+    # Cache metadata
+    metric_type = Column(String(100), nullable=False)  # summary, performance, quality, trends
+    time_period = Column(String(50), nullable=False)  # 1h, 24h, 7d, 30d
+    dashboard_type = Column(String(100), nullable=False)  # executive, qa_ops, technical, analytics, alerts
+    
+    # Cached data
+    cached_data = Column(JSON, nullable=False)
+    data_hash = Column(String(255), nullable=True)  # For change detection
+    
+    # Cache control
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    last_accessed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    access_count = Column(Integer, default=0, nullable=False)
+    
+    # Performance tracking
+    generation_time_ms = Column(Float, nullable=True)
+    data_size_bytes = Column(Integer, nullable=True)
+    
+    # Metadata
+    cache_metadata = Column(JSON, nullable=True)
+
+# Performance indexes for dashboard queries
+Index('idx_test_executions_status_created', TestExecution.status, TestExecution.created_at)
+Index('idx_test_executions_webhook_status', TestExecution.webhook_event_id, TestExecution.status)
+Index('idx_quality_checks_execution_type', QualityCheck.test_execution_id, QualityCheck.check_type)
+Index('idx_performance_metrics_endpoint_time', PerformanceMetric.endpoint_path, PerformanceMetric.created_at)
+Index('idx_template_usage_type_created', TemplateUsageMetric.template_type, TemplateUsageMetric.created_at)
+Index('idx_dashboard_alerts_status_severity', DashboardAlert.status, DashboardAlert.severity)
+Index('idx_metrics_cache_type_period', DashboardMetricsCache.metric_type, DashboardMetricsCache.time_period)
 
 engine = None
 SessionLocal = None

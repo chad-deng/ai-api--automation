@@ -700,3 +700,564 @@ class TestDataFactory:
                     )
         
         return payload
+    
+    # =============================================================================
+    # PHASE 2 ENHANCEMENTS: OpenAPI Schema-Aware Generation
+    # =============================================================================
+    
+    def generate_from_openapi_parameter(self, parameter_info, category: DataCategory = DataCategory.VALID) -> Any:
+        """
+        Generate test data from OpenAPI parameter information
+        
+        Args:
+            parameter_info: ParameterInfo object from OpenAPI parser
+            category: Category of test data to generate
+            
+        Returns:
+            Generated test data value
+        """
+        from src.generators.openapi_parser import ParameterInfo, ParameterType
+        
+        if not isinstance(parameter_info, ParameterInfo):
+            raise ValueError("parameter_info must be a ParameterInfo instance")
+        
+        # Create schema from parameter info
+        schema = {
+            'type': parameter_info.data_type,
+            'format': parameter_info.format_type
+        }
+        
+        # Add constraints to schema
+        if parameter_info.constraints:
+            schema.update(parameter_info.constraints)
+        
+        # Use existing generation logic
+        return self.generate_for_schema(schema, category, parameter_info.name)
+    
+    def generate_from_openapi_endpoint(self, endpoint_analysis, category: DataCategory = DataCategory.VALID) -> Dict[str, Any]:
+        """
+        Generate complete test data for an OpenAPI endpoint
+        
+        Args:
+            endpoint_analysis: EndpointAnalysis object from OpenAPI parser
+            category: Category of test data to generate
+            
+        Returns:
+            Dict containing all parameter data for the endpoint
+        """
+        from src.generators.openapi_parser import EndpointAnalysis, ParameterType
+        
+        if not isinstance(endpoint_analysis, EndpointAnalysis):
+            raise ValueError("endpoint_analysis must be an EndpointAnalysis instance")
+        
+        test_data = {
+            'path_params': {},
+            'query_params': {},
+            'header_params': {},
+            'cookie_params': {},
+            'body_data': None
+        }
+        
+        # Generate parameter data
+        for param in endpoint_analysis.parameters:
+            value = self.generate_from_openapi_parameter(param, category)
+            
+            if param.param_type == ParameterType.PATH:
+                test_data['path_params'][param.name] = value
+            elif param.param_type == ParameterType.QUERY:
+                test_data['query_params'][param.name] = value
+            elif param.param_type == ParameterType.HEADER:
+                test_data['header_params'][param.name] = value
+            elif param.param_type == ParameterType.COOKIE:
+                test_data['cookie_params'][param.name] = value
+            elif param.param_type == ParameterType.BODY:
+                if test_data['body_data'] is None:
+                    test_data['body_data'] = {}
+                test_data['body_data'][param.name] = value
+        
+        # Generate request body data if schema exists
+        if endpoint_analysis.request_body:
+            schema = endpoint_analysis.request_body.get('schema', {})
+            if schema:
+                if test_data['body_data'] is None:
+                    test_data['body_data'] = self.generate_for_schema(schema, category)
+                else:
+                    # Merge with existing body data
+                    generated_body = self.generate_for_schema(schema, category)
+                    if isinstance(generated_body, dict):
+                        test_data['body_data'].update(generated_body)
+        
+        return test_data
+    
+    def generate_realistic_dataset(self, endpoint_analysis, dataset_size: int = 10) -> List[Dict[str, Any]]:
+        """
+        Generate a realistic dataset for endpoint testing
+        
+        Args:
+            endpoint_analysis: EndpointAnalysis object from OpenAPI parser
+            dataset_size: Number of data variants to generate
+            
+        Returns:
+            List of test data dictionaries
+        """
+        dataset = []
+        
+        categories = [
+            DataCategory.VALID,
+            DataCategory.REALISTIC,
+            DataCategory.BOUNDARY,
+            DataCategory.INVALID,
+            DataCategory.EDGE_CASE,
+            DataCategory.SECURITY
+        ]
+        
+        # Generate multiple valid/realistic examples
+        for i in range(max(1, dataset_size // 2)):
+            category = random.choice([DataCategory.VALID, DataCategory.REALISTIC])
+            data = self.generate_from_openapi_endpoint(endpoint_analysis, category)
+            data['_data_category'] = category.value
+            data['_variant_id'] = i
+            dataset.append(data)
+        
+        # Generate edge cases and invalid data
+        remaining_size = dataset_size - len(dataset)
+        edge_categories = [DataCategory.BOUNDARY, DataCategory.INVALID, DataCategory.EDGE_CASE, DataCategory.SECURITY]
+        
+        for i in range(remaining_size):
+            category = random.choice(edge_categories)
+            try:
+                data = self.generate_from_openapi_endpoint(endpoint_analysis, category)
+                data['_data_category'] = category.value
+                data['_variant_id'] = len(dataset) + i
+                dataset.append(data)
+            except Exception as e:
+                # Log but continue if generation fails
+                self.logger.warning("Failed to generate test data variant", 
+                                  category=category.value, error=str(e))
+        
+        return dataset
+    
+    def generate_boundary_test_data(self, parameter_info) -> List[TestDataVariant]:
+        """
+        Generate comprehensive boundary test data for a parameter
+        
+        Args:
+            parameter_info: ParameterInfo object from OpenAPI parser
+            
+        Returns:
+            List of boundary test data variants
+        """
+        from src.generators.openapi_parser import ParameterInfo
+        
+        if not isinstance(parameter_info, ParameterInfo):
+            raise ValueError("parameter_info must be a ParameterInfo instance")
+        
+        variants = []
+        constraints = parameter_info.constraints
+        
+        # String length boundaries
+        if parameter_info.data_type == 'string':
+            min_len = constraints.get('min_length', 0)
+            max_len = constraints.get('max_length', 100)
+            
+            if min_len is not None:
+                # Minimum length
+                variants.append(TestDataVariant(
+                    category=DataCategory.BOUNDARY,
+                    value='x' * min_len if min_len > 0 else '',
+                    description=f"Minimum length ({min_len})",
+                    should_pass_validation=True
+                ))
+                
+                # Below minimum (if possible)
+                if min_len > 0:
+                    variants.append(TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value='x' * (min_len - 1),
+                        description=f"Below minimum length ({min_len - 1})",
+                        should_pass_validation=False
+                    ))
+            
+            if max_len is not None:
+                # Maximum length
+                variants.append(TestDataVariant(
+                    category=DataCategory.BOUNDARY,
+                    value='x' * max_len,
+                    description=f"Maximum length ({max_len})",
+                    should_pass_validation=True
+                ))
+                
+                # Above maximum
+                variants.append(TestDataVariant(
+                    category=DataCategory.BOUNDARY,
+                    value='x' * (max_len + 1),
+                    description=f"Above maximum length ({max_len + 1})",
+                    should_pass_validation=False
+                ))
+        
+        # Numeric value boundaries
+        elif parameter_info.data_type in ['integer', 'number']:
+            minimum = constraints.get('minimum')
+            maximum = constraints.get('maximum')
+            exclusive_min = constraints.get('exclusive_minimum')
+            exclusive_max = constraints.get('exclusive_maximum')
+            
+            if minimum is not None:
+                variants.extend([
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=minimum,
+                        description=f"Minimum value ({minimum})",
+                        should_pass_validation=True
+                    ),
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=minimum - 1,
+                        description=f"Below minimum ({minimum - 1})",
+                        should_pass_validation=False
+                    )
+                ])
+            
+            if maximum is not None:
+                variants.extend([
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=maximum,
+                        description=f"Maximum value ({maximum})",
+                        should_pass_validation=True
+                    ),
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=maximum + 1,
+                        description=f"Above maximum ({maximum + 1})",
+                        should_pass_validation=False
+                    )
+                ])
+            
+            if exclusive_min is not None:
+                variants.extend([
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=exclusive_min + 0.001 if parameter_info.data_type == 'number' else exclusive_min + 1,
+                        description=f"Just above exclusive minimum",
+                        should_pass_validation=True
+                    ),
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=exclusive_min,
+                        description=f"At exclusive minimum ({exclusive_min})",
+                        should_pass_validation=False
+                    )
+                ])
+            
+            if exclusive_max is not None:
+                variants.extend([
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=exclusive_max - 0.001 if parameter_info.data_type == 'number' else exclusive_max - 1,
+                        description=f"Just below exclusive maximum",
+                        should_pass_validation=True
+                    ),
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=exclusive_max,
+                        description=f"At exclusive maximum ({exclusive_max})",
+                        should_pass_validation=False
+                    )
+                ])
+        
+        # Array length boundaries
+        elif parameter_info.data_type == 'array':
+            min_items = constraints.get('min_items', 0)
+            max_items = constraints.get('max_items', 10)
+            
+            if min_items is not None:
+                variants.extend([
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=['item'] * min_items,
+                        description=f"Minimum items ({min_items})",
+                        should_pass_validation=True
+                    ),
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=['item'] * max(0, min_items - 1),
+                        description=f"Below minimum items ({max(0, min_items - 1)})",
+                        should_pass_validation=False if min_items > 0 else True
+                    )
+                ])
+            
+            if max_items is not None:
+                variants.extend([
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=['item'] * max_items,
+                        description=f"Maximum items ({max_items})",
+                        should_pass_validation=True
+                    ),
+                    TestDataVariant(
+                        category=DataCategory.BOUNDARY,
+                        value=['item'] * (max_items + 1),
+                        description=f"Above maximum items ({max_items + 1})",
+                        should_pass_validation=False
+                    )
+                ])
+        
+        return variants
+    
+    def generate_security_test_vectors(self, parameter_info) -> List[TestDataVariant]:
+        """
+        Generate security test vectors for a parameter
+        
+        Args:
+            parameter_info: ParameterInfo object from OpenAPI parser
+            
+        Returns:
+            List of security test data variants
+        """
+        from src.generators.openapi_parser import ParameterInfo
+        
+        if not isinstance(parameter_info, ParameterInfo):
+            raise ValueError("parameter_info must be a ParameterInfo instance")
+        
+        variants = []
+        
+        # Only generate security vectors for string parameters
+        if parameter_info.data_type != 'string':
+            return variants
+        
+        # SQL Injection vectors
+        sql_payloads = [
+            "'; DROP TABLE users; --",
+            "' OR '1'='1",
+            "admin'--",
+            "' UNION SELECT * FROM users--",
+            "1' OR 1=1#"
+        ]
+        
+        for payload in sql_payloads:
+            variants.append(TestDataVariant(
+                category=DataCategory.SECURITY,
+                value=payload,
+                description=f"SQL injection: {payload[:20]}...",
+                should_pass_validation=False
+            ))
+        
+        # XSS vectors
+        xss_payloads = [
+            "<script>alert('xss')</script>",
+            "<img src=x onerror=alert(1)>",
+            "javascript:alert('xss')",
+            "<svg onload=alert('xss')>",
+            "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>"
+        ]
+        
+        for payload in xss_payloads:
+            variants.append(TestDataVariant(
+                category=DataCategory.SECURITY,
+                value=payload,
+                description=f"XSS injection: {payload[:20]}...",
+                should_pass_validation=False
+            ))
+        
+        # Command Injection vectors
+        cmd_payloads = [
+            "; cat /etc/passwd",
+            "| whoami",
+            "&& rm -rf /",
+            "`id`",
+            "$(id)"
+        ]
+        
+        for payload in cmd_payloads:
+            variants.append(TestDataVariant(
+                category=DataCategory.SECURITY,
+                value=payload,
+                description=f"Command injection: {payload[:20]}...",
+                should_pass_validation=False
+            ))
+        
+        # Path Traversal vectors
+        path_payloads = [
+            "../../../etc/passwd",
+            "..\\..\\..\\windows\\system32\\config\\sam",
+            "....//....//....//etc/passwd",
+            "%2e%2e%2f%2e%2e%2f%2e%2e%2f%65%74%63%2f%70%61%73%73%77%64"
+        ]
+        
+        for payload in path_payloads:
+            variants.append(TestDataVariant(
+                category=DataCategory.SECURITY,
+                value=payload,
+                description=f"Path traversal: {payload[:20]}...",
+                should_pass_validation=False
+            ))
+        
+        # LDAP Injection vectors
+        ldap_payloads = [
+            "*)(&",
+            "*)(uid=*",
+            "admin)(&(password=*))"
+        ]
+        
+        for payload in ldap_payloads:
+            variants.append(TestDataVariant(
+                category=DataCategory.SECURITY,
+                value=payload,
+                description=f"LDAP injection: {payload[:20]}...",
+                should_pass_validation=False
+            ))
+        
+        # Format string vulnerabilities
+        format_payloads = [
+            "%x%x%x%x",
+            "%s%s%s%s",
+            "%n%n%n%n"
+        ]
+        
+        for payload in format_payloads:
+            variants.append(TestDataVariant(
+                category=DataCategory.SECURITY,
+                value=payload,
+                description=f"Format string: {payload}",
+                should_pass_validation=False
+            ))
+        
+        return variants
+    
+    def generate_comprehensive_test_suite(self, endpoint_analysis) -> Dict[str, List[TestDataVariant]]:
+        """
+        Generate a comprehensive test suite for an endpoint
+        
+        Args:
+            endpoint_analysis: EndpointAnalysis object from OpenAPI parser
+            
+        Returns:
+            Dict mapping parameter names to their test data variants
+        """
+        from src.generators.openapi_parser import EndpointAnalysis, ParameterType
+        
+        if not isinstance(endpoint_analysis, EndpointAnalysis):
+            raise ValueError("endpoint_analysis must be an EndpointAnalysis instance")
+        
+        test_suite = {}
+        
+        # Generate test data for each parameter
+        for param in endpoint_analysis.parameters:
+            param_variants = []
+            
+            # Generate valid variants (multiple)
+            for _ in range(3):
+                value = self.generate_from_openapi_parameter(param, DataCategory.VALID)
+                param_variants.append(TestDataVariant(
+                    category=DataCategory.VALID,
+                    value=value,
+                    description=f"Valid {param.data_type} value",
+                    should_pass_validation=True
+                ))
+            
+            # Generate realistic variant
+            realistic_value = self.generate_from_openapi_parameter(param, DataCategory.REALISTIC)
+            param_variants.append(TestDataVariant(
+                category=DataCategory.REALISTIC,
+                value=realistic_value,
+                description=f"Realistic {param.data_type} value",
+                should_pass_validation=True
+            ))
+            
+            # Generate boundary variants if constraints exist
+            if param.constraints:
+                param_variants.extend(self.generate_boundary_test_data(param))
+            
+            # Generate invalid type variants
+            invalid_value = self.generate_from_openapi_parameter(param, DataCategory.INVALID)
+            param_variants.append(TestDataVariant(
+                category=DataCategory.INVALID,
+                value=invalid_value,
+                description=f"Invalid {param.data_type} type",
+                should_pass_validation=False
+            ))
+            
+            # Generate edge case variants
+            edge_value = self.generate_from_openapi_parameter(param, DataCategory.EDGE_CASE)
+            param_variants.append(TestDataVariant(
+                category=DataCategory.EDGE_CASE,
+                value=edge_value,
+                description=f"Edge case {param.data_type} value",
+                should_pass_validation=False
+            ))
+            
+            # Generate security variants for string parameters
+            if param.data_type == 'string':
+                security_variants = self.generate_security_test_vectors(param)
+                param_variants.extend(security_variants[:5])  # Limit to 5 security variants per parameter
+            
+            test_suite[param.name] = param_variants
+        
+        # Generate request body test variants if applicable
+        if endpoint_analysis.request_body:
+            schema = endpoint_analysis.request_body.get('schema', {})
+            if schema:
+                body_variants = self.generate_test_data_variants(schema, 'request_body')
+                test_suite['request_body'] = body_variants
+        
+        return test_suite
+    
+    def optimize_test_data_for_strategy(self, endpoint_analysis, test_strategy: str) -> Dict[str, Any]:
+        """
+        Generate optimized test data for a specific test strategy
+        
+        Args:
+            endpoint_analysis: EndpointAnalysis object from OpenAPI parser
+            test_strategy: Specific test strategy (e.g., 'boundary_testing', 'security_testing')
+            
+        Returns:
+            Optimized test data for the strategy
+        """
+        strategy_mapping = {
+            'basic_functionality': DataCategory.VALID,
+            'parameter_validation': DataCategory.VALID,
+            'boundary_testing': DataCategory.BOUNDARY,
+            'security_testing': DataCategory.SECURITY,
+            'error_scenarios': DataCategory.INVALID,
+            'data_validation': DataCategory.REALISTIC,
+            'performance_testing': DataCategory.REALISTIC
+        }
+        
+        category = strategy_mapping.get(test_strategy, DataCategory.VALID)
+        
+        # Generate base test data
+        test_data = self.generate_from_openapi_endpoint(endpoint_analysis, category)
+        
+        # Strategy-specific optimizations
+        if test_strategy == 'boundary_testing':
+            # Focus on parameters with constraints
+            for param in endpoint_analysis.parameters:
+                if param.constraints:
+                    boundary_variants = self.generate_boundary_test_data(param)
+                    if boundary_variants:
+                        # Use the first boundary variant
+                        test_data[f"{param.param_type.value}_params"][param.name] = boundary_variants[0].value
+        
+        elif test_strategy == 'security_testing':
+            # Apply security payloads to string parameters
+            for param in endpoint_analysis.parameters:
+                if param.data_type == 'string':
+                    security_variants = self.generate_security_test_vectors(param)
+                    if security_variants:
+                        test_data[f"{param.param_type.value}_params"][param.name] = security_variants[0].value
+        
+        elif test_strategy == 'performance_testing':
+            # Generate larger datasets for performance testing
+            if test_data.get('body_data') and isinstance(test_data['body_data'], dict):
+                # Add more data for performance testing
+                for key, value in test_data['body_data'].items():
+                    if isinstance(value, str):
+                        test_data['body_data'][key] = value * 10  # Make strings longer
+                    elif isinstance(value, list):
+                        test_data['body_data'][key] = value * 50  # Make arrays larger
+        
+        test_data['_strategy'] = test_strategy
+        test_data['_category'] = category.value
+        
+        return test_data

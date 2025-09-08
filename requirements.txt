@@ -16,4 +16,11 @@ tenacity==8.2.3
 click==8.1.7
 pygments==2.17.2
 gitpython==3.1.40
-aiohttp==3.9.1click
+aiohttp==3.9.1
+# Phase 3 Dashboard Dependencies
+redis==5.0.1
+reportlab==4.0.7
+pandas==2.1.4
+numpy==1.25.2
+psycopg2-binary==2.9.9
+websockets==12.0

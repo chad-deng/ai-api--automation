@@ -602,12 +602,14 @@ import json
 import asyncio
 import time
 import math
+from src.config.settings import Settings
 
 # Advanced Boundary Tests for: {description}
 # Method: {method}
 # Path: {path}
 # Generated: Enhanced Boundary Test Generation
 
+settings = Settings()
 BASE_URL = settings.test_api_base_url
 
 class TestBoundaryEndpoint:
@@ -625,7 +627,7 @@ class TestBoundaryEndpoint:
     @pytest.fixture
     def auth_headers(self):
         """Authentication headers for boundary tests"""
-        return {{"Authorization": "Bearer {auth_token}"}}
+        return {{"Authorization": "Bearer <auth_token>"}}
     
     @pytest.fixture
     def performance_monitor(self):

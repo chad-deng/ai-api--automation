@@ -1,1 +1,0 @@
-# Error handling tests for User Management API - Implementation needed
