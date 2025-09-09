@@ -11,13 +11,13 @@ from src.config.settings import Settings
 
 # Week 3 Advanced Test Generators
 from src.generators.test_generators.error_generator import ErrorScenarioGenerator
-from src.generators.test_generators.performance_generator import PerformanceTestGenerator
+# from src.generators.test_generators.performance_generator import PerformanceTestGenerator  # DISABLED
 from src.generators.test_generators.validation_generator import ValidationTestGenerator
 
-# Enhanced Test Generators (Boundary, Environment, Concurrency)
+# Enhanced Test Generators (Boundary, Environment)
 from src.generators.test_generators.boundary_generator import BoundaryTestGenerator
 from src.generators.test_generators.environment_generator import EnvironmentTestGenerator
-from src.generators.test_generators.concurrency_generator import ConcurrencyTestGenerator
+# from src.generators.test_generators.concurrency_generator import ConcurrencyTestGenerator  # DISABLED
 from src.generators.quality_checker import TestQualityChecker
 from src.generators.config_manager import get_config_manager, TestType
 from src.generators.test_data_factory import TestDataFactory
@@ -43,13 +43,13 @@ class TestGenerator:
         # Initialize configuration manager and advanced generators
         self.config_manager = get_config_manager()
         self.error_generator = ErrorScenarioGenerator()
-        self.performance_generator = PerformanceTestGenerator()
+        # self.performance_generator = PerformanceTestGenerator()  # DISABLED
         self.validation_generator = ValidationTestGenerator()
         
         # Enhanced generators
         self.boundary_generator = BoundaryTestGenerator()
         self.environment_generator = EnvironmentTestGenerator()
-        self.concurrency_generator = ConcurrencyTestGenerator()
+        # self.concurrency_generator = ConcurrencyTestGenerator()  # DISABLED
         
         self.quality_checker = TestQualityChecker()
         self.data_factory = TestDataFactory(seed=42)
@@ -79,11 +79,11 @@ class TestGenerator:
         # Week 3 Advanced generators mapping
         self.advanced_generators = {
             TestType.ERROR_SCENARIOS: self.error_generator,
-            TestType.PERFORMANCE: self.performance_generator,
+            # TestType.PERFORMANCE: self.performance_generator,  # DISABLED
             TestType.VALIDATION: self.validation_generator,
             TestType.BOUNDARY_TESTING: self.boundary_generator,
             TestType.ENVIRONMENT_CONFIG: self.environment_generator,
-            TestType.CONCURRENCY: self.concurrency_generator
+            # TestType.CONCURRENCY: self.concurrency_generator  # DISABLED
         }
         
     async def generate_tests_from_webhook(self, webhook: ApiFoxWebhook, db: Session):

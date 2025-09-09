@@ -163,7 +163,8 @@ class TestGenerationConfig(BaseModel):
         TestType.VALIDATION,
         TestType.BOUNDARY_TESTING,
         TestType.ENVIRONMENT_CONFIG,
-        TestType.CONCURRENCY
+        # TestType.CONCURRENCY  # DISABLED
+        # TestType.PERFORMANCE  # DISABLED (if it was here)
     ])
     
     # Template configurations

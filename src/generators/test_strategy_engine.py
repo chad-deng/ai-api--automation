@@ -92,9 +92,9 @@ class TestStrategyEngine:
             TestStrategy.DATA_VALIDATION: 0.8,
             TestStrategy.SCHEMA_VALIDATION: 0.7,
             
-            # Performance and load
-            TestStrategy.PERFORMANCE_TESTING: 0.6,
-            TestStrategy.CONCURRENCY_TESTING: 0.6,
+            # Performance and load - DISABLED
+            # TestStrategy.PERFORMANCE_TESTING: 0.6,
+            # TestStrategy.CONCURRENCY_TESTING: 0.6,
             TestStrategy.RATE_LIMITING: 0.5,
             
             # Advanced scenarios
@@ -110,7 +110,7 @@ class TestStrategyEngine:
                 TestStrategy.PARAMETER_VALIDATION,
                 TestStrategy.AUTHENTICATION_TESTING,
                 TestStrategy.ERROR_SCENARIOS,
-                TestStrategy.PERFORMANCE_TESTING,
+                # TestStrategy.PERFORMANCE_TESTING,  # DISABLED
                 TestStrategy.RATE_LIMITING
             ],
             'POST': [
@@ -120,7 +120,7 @@ class TestStrategyEngine:
                 TestStrategy.SECURITY_TESTING,
                 TestStrategy.AUTHENTICATION_TESTING,
                 TestStrategy.ERROR_SCENARIOS,
-                TestStrategy.CONCURRENCY_TESTING,
+                # TestStrategy.CONCURRENCY_TESTING,  # DISABLED
                 TestStrategy.STATE_MANAGEMENT
             ],
             'PUT': [
@@ -273,12 +273,12 @@ class TestStrategyEngine:
         
         # Complex endpoint strategies
         if endpoint.complexity in [EndpointComplexity.COMPLEX, EndpointComplexity.ADVANCED]:
-            applicable.add(TestStrategy.PERFORMANCE_TESTING)
+            # applicable.add(TestStrategy.PERFORMANCE_TESTING)  # DISABLED
             applicable.add(TestStrategy.INTEGRATION_TESTING)
         
         # State-changing operation strategies
         if endpoint.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            applicable.add(TestStrategy.CONCURRENCY_TESTING)
+            # applicable.add(TestStrategy.CONCURRENCY_TESTING)  # DISABLED
             applicable.add(TestStrategy.STATE_MANAGEMENT)
         
         # Idempotent operation strategies
