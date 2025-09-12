@@ -4,3 +4,12 @@ __pycache__/
 
 
 .env.local
+
+
+# Test/report artifacts
+last_report.html
+reports/
+
+
+# OS-specific artifacts
+.DS_Store

@@ -395,6 +395,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "validation: Data validation test")
     config.addinivalue_line("markers", "integration: Integration test requiring real API")
     config.addinivalue_line("markers", "unit: Unit test that can run with mocks")
+    config.addinivalue_line("markers", "transaction: Transaction testing")
+    config.addinivalue_line("markers", "performance: Performance testing")
+    config.addinivalue_line("markers", "slow: Slow running tests")
     
     # Print test mode information
     print(f"\n🔧 Test Mode: {TEST_MODE}")

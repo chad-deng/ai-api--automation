@@ -1,0 +1,2132 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "StoreHub Backoffice V2 BFF API",
+    "description": "Backend for Frontend (BFF) API for StoreHub's backoffice application providing business management, product management, and e-commerce functionality.",
+    "version": "1.0.0",
+    "contact": {
+      "email": "devs@storehub.com"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://{businessName}.storehub.com",
+      "description": "Production server",
+      "variables": {
+        "businessName": {
+          "default": "demo",
+          "description": "Business subdomain"
+        }
+      }
+    },
+    {
+      "url": "https://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "sessionAuth": []
+    },
+    {
+      "businessHeader": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check endpoint",
+        "description": "Returns system health status",
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "health": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v2/business/country": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get business country",
+        "description": "Retrieves the country information for the business",
+        "responses": {
+          "200": {
+            "description": "Business country information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessCountryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/pendo": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get business Pendo configuration",
+        "description": "Retrieves Pendo analytics configuration for the business",
+        "responses": {
+          "200": {
+            "description": "Pendo configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/basicInfo": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get basic business information",
+        "description": "Retrieves basic business information including name, settings, and configuration",
+        "responses": {
+          "200": {
+            "description": "Business basic information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessInfoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/stores": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get business stores",
+        "description": "Retrieves all stores associated with the business",
+        "responses": {
+          "200": {
+            "description": "List of business stores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessStoresResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/qrOrderingEnabled": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get QR ordering status",
+        "description": "Checks if QR ordering is enabled for the business",
+        "responses": {
+          "200": {
+            "description": "QR ordering status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QROrderingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/operationHours": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get operation hours",
+        "description": "Retrieves business operation hours",
+        "responses": {
+          "200": {
+            "description": "Business operation hours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationHoursResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/beep-profile": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get Beep profile",
+        "description": "Retrieves the business Beep profile information",
+        "responses": {
+          "200": {
+            "description": "Beep profile information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BeepProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Business"],
+        "summary": "Update Beep profile",
+        "description": "Updates the business Beep profile information",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeepProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Beep profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/beep-profile-image": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get Beep profile image upload URL",
+        "description": "Retrieves pre-signed POST parameters for uploading Beep profile images",
+        "responses": {
+          "200": {
+            "description": "Pre-signed upload parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreSignedUploadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/beep-product-images": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get Beep product images",
+        "description": "Retrieves product images for Beep platform",
+        "responses": {
+          "200": {
+            "description": "List of product images",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductImagesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/qrOrderingSettings": {
+      "put": {
+        "tags": ["Business"],
+        "summary": "Update QR ordering settings",
+        "description": "Updates QR ordering configuration settings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QROrderingSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "QR ordering settings updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/stores/sellOnBeep": {
+      "put": {
+        "tags": ["Business"],
+        "summary": "Set stores to sell on Beep",
+        "description": "Configures which stores are enabled to sell on Beep platform",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SellOnBeepRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stores configuration updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/business/getPutImageUrl/{id}": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get image upload URL",
+        "description": "Retrieves a pre-signed URL for uploading images",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Image identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pre-signed upload URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadUrlResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/business/opportunities/{id}": {
+      "get": {
+        "tags": ["Business"],
+        "summary": "Get opportunity information",
+        "description": "Retrieves information about a specific business opportunity",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Opportunity ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opportunity information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/business/e-invoice/setting": {
+      "post": {
+        "tags": ["Business"],
+        "summary": "Update e-invoice settings",
+        "description": "Updates electronic invoice settings for the business",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EInvoiceSettingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "E-invoice settings updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/business/kds/licenses": {
+      "post": {
+        "tags": ["Business"],
+        "summary": "Get KDS licenses",
+        "description": "Retrieves Kitchen Display System licenses for stores",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KdsLicensesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KDS licenses information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/business/kds/toggle": {
+      "post": {
+        "tags": ["Business"],
+        "summary": "Toggle KDS",
+        "description": "Enables or disables Kitchen Display System for a store",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KdsToggleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KDS toggle successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/business/ncs/toggle": {
+      "post": {
+        "tags": ["Business"],
+        "summary": "Toggle NCS",
+        "description": "Enables or disables Notification Communication System for a store",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NcsToggleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "NCS toggle successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/merchant": {
+      "get": {
+        "tags": ["Merchant"],
+        "summary": "Get merchant information",
+        "description": "Retrieves merchant profile and configuration data",
+        "responses": {
+          "200": {
+            "description": "Merchant information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/merchant/billing/sms": {
+      "get": {
+        "tags": ["Merchant"],
+        "summary": "Get SMS billing information",
+        "description": "Retrieves SMS billing details and usage statistics",
+        "responses": {
+          "200": {
+            "description": "SMS billing information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/merchant/billing/sms/discountInfos": {
+      "get": {
+        "tags": ["Merchant"],
+        "summary": "Get SMS discount information",
+        "description": "Retrieves available SMS billing discounts and promotions",
+        "responses": {
+          "200": {
+            "description": "SMS discount information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/products/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get product by ID",
+        "description": "Retrieves detailed information about a specific product",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Update product",
+        "description": "Updates an existing product with new information",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Delete product",
+        "description": "Deletes a specific product from the catalog",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/products": {
+      "put": {
+        "tags": ["Products"],
+        "summary": "Create new product",
+        "description": "Creates a new product in the catalog",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/products-search": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Search products by name",
+        "description": "Searches for products by name with optional filters",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductSearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/product-categories": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get product categories",
+        "description": "Retrieves all available product categories",
+        "responses": {
+          "200": {
+            "description": "List of product categories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/product-tags": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get product tags",
+        "description": "Retrieves all available product tags",
+        "responses": {
+          "200": {
+            "description": "List of product tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/product-suppliers": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get product suppliers",
+        "description": "Retrieves all available product suppliers",
+        "responses": {
+          "200": {
+            "description": "List of product suppliers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuppliersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v2/product-units": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get product units",
+        "description": "Retrieves all available product units of measurement",
+        "responses": {
+          "200": {
+            "description": "List of product units",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/shared-modifiers": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get shared modifiers",
+        "description": "Retrieves all shared product modifiers",
+        "responses": {
+          "200": {
+            "description": "List of shared modifiers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Products"],
+        "summary": "Create modifier group",
+        "description": "Creates a new shared modifier group",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierGroupCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Modifier group created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/shared-modifiers/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get shared modifier by ID",
+        "description": "Retrieves a specific shared modifier group",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Modifier group ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modifier group details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Update modifier group",
+        "description": "Updates an existing shared modifier group",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Modifier group ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifierGroupUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modifier group updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Delete modifier group",
+        "description": "Deletes a specific shared modifier group",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Modifier group ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modifier group deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/shared-modifiers/{id}/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Search products with specific modifier",
+        "description": "Retrieves products that have a specific modifier attached",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Modifier group ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Products with the specified modifier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/shared-modifiers/batch-delete": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Batch delete modifier groups",
+        "description": "Deletes multiple shared modifier groups in a single request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modifier groups deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/products/link-shared-modifier": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Link modifier group to products",
+        "description": "Associates a modifier group with multiple products",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkModifierRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modifier linked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/products/unlink-shared-modifier": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Unlink modifier group from products",
+        "description": "Removes association between a modifier group and products",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlinkModifierRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Modifier unlinked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/payment/online-options": {
+      "get": {
+        "tags": ["Payment"],
+        "summary": "Get online payment options",
+        "description": "Retrieves available online payment methods and configuration",
+        "responses": {
+          "200": {
+            "description": "Online payment options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/payment/complete": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Complete payment",
+        "description": "Processes payment completion and redirects to dashboard",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v3/payment-intent": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Create payment intent",
+        "description": "Creates a payment intent for processing payments",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment intent created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseV3"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "connect.sid",
+        "description": "Session-based authentication using Express sessions"
+      },
+      "businessHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "storehub-business",
+        "description": "Business identifier header for multi-tenant support"
+      }
+    },
+    "schemas": {
+      "ResponseV3": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "Response code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description"
+          },
+          "data": {
+            "type": "object",
+            "description": "Response data"
+          }
+        }
+      },
+      "ErrorV3": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "Error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "description": {
+            "type": "string",
+            "description": "Error description"
+          },
+          "data": {
+            "type": "object",
+            "description": "Additional error data"
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation completed successfully"
+          }
+        }
+      },
+      "BusinessCountryResponse": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "Country code",
+            "example": "MY"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code",
+            "example": "MYR"
+          }
+        }
+      },
+      "PendoResponse": {
+        "type": "object",
+        "properties": {
+          "pendoApiKey": {
+            "type": "string",
+            "description": "Pendo API key for analytics"
+          },
+          "visitorId": {
+            "type": "string",
+            "description": "Visitor identifier"
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Account identifier"
+          }
+        }
+      },
+      "BusinessInfoResponse": {
+        "type": "object",
+        "properties": {
+          "businessName": {
+            "type": "string",
+            "description": "Business name"
+          },
+          "businessType": {
+            "type": "string",
+            "description": "Type of business"
+          },
+          "country": {
+            "type": "string",
+            "description": "Business country"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Business currency"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Business timezone"
+          }
+        }
+      },
+      "BusinessStoresResponse": {
+        "type": "object",
+        "properties": {
+          "stores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Store"
+            }
+          }
+        }
+      },
+      "Store": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Store ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Store name"
+          },
+          "address": {
+            "type": "string",
+            "description": "Store address"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Store phone number"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Store active status"
+          }
+        }
+      },
+      "QROrderingResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "QR ordering enabled status"
+          },
+          "settings": {
+            "type": "object",
+            "description": "QR ordering configuration settings"
+          }
+        }
+      },
+      "OperationHoursResponse": {
+        "type": "object",
+        "properties": {
+          "operationHours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperationHour"
+            }
+          }
+        }
+      },
+      "OperationHour": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "Day of the week"
+          },
+          "openTime": {
+            "type": "string",
+            "description": "Opening time"
+          },
+          "closeTime": {
+            "type": "string",
+            "description": "Closing time"
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Store closed on this day"
+          }
+        }
+      },
+      "BeepProfileResponse": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/BeepProfile"
+          }
+        }
+      },
+      "BeepProfile": {
+        "type": "object",
+        "properties": {
+          "businessName": {
+            "type": "string",
+            "description": "Business display name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Business description"
+          },
+          "logoUrl": {
+            "type": "string",
+            "description": "Business logo URL"
+          },
+          "bannerUrl": {
+            "type": "string",
+            "description": "Business banner URL"
+          }
+        }
+      },
+      "BeepProfileRequest": {
+        "type": "object",
+        "properties": {
+          "businessName": {
+            "type": "string",
+            "description": "Business display name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Business description"
+          },
+          "logoUrl": {
+            "type": "string",
+            "description": "Business logo URL"
+          },
+          "bannerUrl": {
+            "type": "string",
+            "description": "Business banner URL"
+          }
+        }
+      },
+      "PreSignedUploadResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "description": "Pre-signed upload URL"
+          },
+          "fields": {
+            "type": "object",
+            "description": "Upload form fields"
+          }
+        }
+      },
+      "ProductImagesResponse": {
+        "type": "object",
+        "properties": {
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductImage"
+            }
+          }
+        }
+      },
+      "ProductImage": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "Product ID"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Product image URL"
+          },
+          "altText": {
+            "type": "string",
+            "description": "Image alt text"
+          }
+        }
+      },
+      "QROrderingSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable QR ordering"
+          },
+          "settings": {
+            "type": "object",
+            "description": "QR ordering configuration"
+          }
+        }
+      },
+      "SellOnBeepRequest": {
+        "type": "object",
+        "properties": {
+          "storeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of store IDs to enable on Beep"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable selling on Beep"
+          }
+        }
+      },
+      "ImageUploadUrlResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "description": "Pre-signed URL for image upload"
+          }
+        }
+      },
+      "EInvoiceSettingRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable e-invoice"
+          },
+          "configuration": {
+            "type": "object",
+            "description": "E-invoice configuration settings"
+          }
+        }
+      },
+      "KdsLicensesRequest": {
+        "type": "object",
+        "properties": {
+          "storeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of store IDs"
+          }
+        }
+      },
+      "KdsToggleRequest": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store ID"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable KDS"
+          }
+        }
+      },
+      "NcsToggleRequest": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "description": "Store ID"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable NCS"
+          }
+        }
+      },
+      "MerchantResponse": {
+        "type": "object",
+        "properties": {
+          "merchant": {
+            "$ref": "#/components/schemas/Merchant"
+          }
+        }
+      },
+      "Merchant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Merchant ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Merchant name"
+          },
+          "email": {
+            "type": "string",
+            "description": "Merchant email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Merchant phone number"
+          },
+          "businessType": {
+            "type": "string",
+            "description": "Type of business"
+          }
+        }
+      },
+      "ProductResponse": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "$ref": "#/components/schemas/Product"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Product ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description"
+          },
+          "price": {
+            "type": "number",
+            "description": "Product price"
+          },
+          "category": {
+            "type": "string",
+            "description": "Product category"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Product SKU"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Product active status"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Product image URLs"
+          }
+        }
+      },
+      "ProductCreateRequest": {
+        "type": "object",
+        "required": ["name", "price"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description"
+          },
+          "price": {
+            "type": "number",
+            "description": "Product price"
+          },
+          "category": {
+            "type": "string",
+            "description": "Product category"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Product SKU"
+          }
+        }
+      },
+      "ProductUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description"
+          },
+          "price": {
+            "type": "number",
+            "description": "Product price"
+          },
+          "category": {
+            "type": "string",
+            "description": "Product category"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Product SKU"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Product active status"
+          }
+        }
+      },
+      "ProductSearchResponse": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of search results"
+          }
+        }
+      },
+      "CategoriesResponse": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Category ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Category name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Category description"
+          }
+        }
+      },
+      "TagsResponse": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          }
+        }
+      },
+      "Tag": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Tag ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Tag name"
+          },
+          "color": {
+            "type": "string",
+            "description": "Tag color"
+          }
+        }
+      },
+      "SuppliersResponse": {
+        "type": "object",
+        "properties": {
+          "suppliers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Supplier"
+            }
+          }
+        }
+      },
+      "Supplier": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Supplier ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Supplier name"
+          },
+          "contact": {
+            "type": "string",
+            "description": "Supplier contact information"
+          }
+        }
+      },
+      "UnitsResponse": {
+        "type": "object",
+        "properties": {
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Unit"
+            }
+          }
+        }
+      },
+      "Unit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unit ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Unit name"
+          },
+          "abbreviation": {
+            "type": "string",
+            "description": "Unit abbreviation"
+          }
+        }
+      },
+      "ModifierGroupCreateRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Modifier group name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Modifier group description"
+          },
+          "modifiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Modifier"
+            }
+          }
+        }
+      },
+      "ModifierGroupUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Modifier group name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Modifier group description"
+          },
+          "modifiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Modifier"
+            }
+          }
+        }
+      },
+      "Modifier": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Modifier ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Modifier name"
+          },
+          "price": {
+            "type": "number",
+            "description": "Modifier price"
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Modifier required status"
+          }
+        }
+      },
+      "BatchDeleteRequest": {
+        "type": "object",
+        "required": ["ids"],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of modifier group IDs to delete"
+          }
+        }
+      },
+      "LinkModifierRequest": {
+        "type": "object",
+        "required": ["modifierGroupId", "productIds"],
+        "properties": {
+          "modifierGroupId": {
+            "type": "string",
+            "description": "Modifier group ID"
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of product IDs"
+          }
+        }
+      },
+      "UnlinkModifierRequest": {
+        "type": "object",
+        "required": ["modifierGroupId", "productIds"],
+        "properties": {
+          "modifierGroupId": {
+            "type": "string",
+            "description": "Modifier group ID"
+          },
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of product IDs"
+          }
+        }
+      },
+      "PaymentCompleteRequest": {
+        "type": "object",
+        "required": ["paymentId"],
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "description": "Payment ID"
+          },
+          "status": {
+            "type": "string",
+            "description": "Payment status"
+          }
+        }
+      },
+      "PaymentIntentRequest": {
+        "type": "object",
+        "required": ["amount"],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Payment amount"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Payment currency",
+            "default": "MYR"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorV3"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorV3"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorV3"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorV3"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "System health and monitoring endpoints"
+    },
+    {
+      "name": "Business",
+      "description": "Business management and configuration endpoints"
+    },
+    {
+      "name": "Merchant",
+      "description": "Merchant profile and billing information endpoints"
+    },
+    {
+      "name": "Products",
+      "description": "Product catalog and modifier management endpoints"
+    },
+    {
+      "name": "Payment",
+      "description": "Payment processing and configuration endpoints"
+    }
+  ]
+}
